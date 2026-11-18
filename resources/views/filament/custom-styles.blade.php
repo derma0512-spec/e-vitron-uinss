@@ -1,4 +1,114 @@
 <meta name="color-scheme" content="light only">
+@if(config('services.demo.quick_login'))
+<style id="sipetron-demo-admin-desktop-lock">
+    /* Khusus Mode Demo Pameran (Railway): Kunci tata letak Admin selalu proporsional Laptop (1366px) di Standing Kiosk Vertikal maupun HP */
+    html,
+    body,
+    .fi-body,
+    .fi-layout {
+        background: linear-gradient(to right, #0F3D2E 0, #0F3D2E 15.5rem, #F8FAF9 15.5rem, #F8FAF9 100%) !important;
+    }
+
+    .fi-layout {
+        display: flex !important;
+        flex-direction: row !important;
+        width: 100% !important;
+        min-height: 100vh !important;
+    }
+
+    aside.fi-sidebar,
+    aside.fi-main-sidebar {
+        position: sticky !important;
+        top: 0 !important;
+        width: 15.5rem !important;
+        min-width: 15.5rem !important;
+        max-width: 15.5rem !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        transform: none !important;
+        flex-shrink: 0 !important;
+        display: flex !important;
+        z-index: 30 !important;
+    }
+
+    .fi-sidebar-close-overlay,
+    .fi-topbar nav > button.fi-icon-btn {
+        display: none !important;
+    }
+
+    .fi-main-ctn {
+        flex: 1 1 0% !important;
+        min-width: 0 !important;
+        width: calc(100% - 15.5rem) !important;
+        max-width: calc(100% - 15.5rem) !important;
+        margin: 0 !important;
+        opacity: 1 !important;
+    }
+
+    .sipetron-grid-stats {
+        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    }
+
+    .sipetron-grid-charts {
+        grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.2fr) !important;
+    }
+
+    .sipetron-grid-bottom {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    }
+</style>
+<script data-testid="demo-admin-kiosk-viewport">
+    (function () {
+        var TARGET_ADMIN_WIDTH = 1366;
+        var resizeTimer = null;
+        var ignoreResizeUntil = 0;
+
+        function syncAdminDemoViewport() {
+            ignoreResizeUntil = Date.now() + 180;
+            var meta = document.querySelector('meta[name="viewport"]');
+            document.documentElement.style.zoom = '1';
+            document.documentElement.style.minWidth = '';
+
+            if (meta && meta.getAttribute('data-admin-scaled') === '1') {
+                meta.setAttribute('content', 'width=device-width, initial-scale=1.0');
+                meta.removeAttribute('data-admin-scaled');
+            }
+
+            var trueWidth = window.innerWidth || document.documentElement.clientWidth || TARGET_ADMIN_WIDTH;
+
+            if (trueWidth >= TARGET_ADMIN_WIDTH) {
+                document.documentElement.style.zoom = '';
+                return;
+            }
+
+            if (meta) {
+                meta.setAttribute('content', 'width=' + TARGET_ADMIN_WIDTH);
+                meta.setAttribute('data-admin-scaled', '1');
+            }
+
+            var afterMetaWidth = window.innerWidth || document.documentElement.clientWidth || trueWidth;
+            if (afterMetaWidth < TARGET_ADMIN_WIDTH) {
+                var scale = trueWidth / TARGET_ADMIN_WIDTH;
+                document.documentElement.style.minWidth = TARGET_ADMIN_WIDTH + 'px';
+                document.documentElement.style.zoom = String(scale);
+            } else {
+                document.documentElement.style.zoom = '';
+            }
+        }
+
+        syncAdminDemoViewport();
+        window.addEventListener('DOMContentLoaded', syncAdminDemoViewport);
+        document.addEventListener('livewire:navigated', syncAdminDemoViewport);
+        window.addEventListener('resize', function () {
+            if (Date.now() < ignoreResizeUntil) {
+                return;
+            }
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(syncAdminDemoViewport, 90);
+        });
+    })();
+</script>
+@endif
 <style id="sipetron-critical-anti-flash">
     /* Kunci warna dasar & tata letak sejak milidetik ke-0 agar 0% jepret putih (FOUC) */
     html,

@@ -302,6 +302,7 @@ class AuthTest extends TestCase
         $defaultLoginView = $this->get('/login');
         $defaultLoginView->assertStatus(200);
         $defaultLoginView->assertDontSee('Akses Cepat Demo');
+        $defaultLoginView->assertDontSee('demo-kiosk-viewport', false);
 
         config([
             'services.demo.quick_login' => true,
@@ -318,6 +319,7 @@ class AuthTest extends TestCase
         $demoLoginView->assertSee('Pemohon Demo');
         $demoLoginView->assertSee('Admin E-VITRON');
         $demoLoginView->assertSee('2208101001');
+        $demoLoginView->assertSee('demo-kiosk-viewport', false);
 
         $this->artisan('db:seed', ['--class' => 'Database\\Seeders\\ExhibitionDemoSeeder', '--force' => true])
             ->assertExitCode(0);
