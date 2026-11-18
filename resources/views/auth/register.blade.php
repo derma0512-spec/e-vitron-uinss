@@ -107,8 +107,8 @@
         showPasswordConfirm: false,
         showHelpModal: false,
         copiedEmail: false,
-        copyEmail() {
-            const email = 'info@uinssc.ac.id';
+        copyEmail(targetEmail) {
+            const email = targetEmail || 'info@uinssc.ac.id';
             const done = () => { this.copiedEmail = true; setTimeout(() => { this.copiedEmail = false; }, 2500); };
             const fallback = () => {
                 const t = document.createElement('textarea');

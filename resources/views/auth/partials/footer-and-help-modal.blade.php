@@ -1,3 +1,19 @@
+    @php
+        $helpdeskWa = trim((string) setting('helpdesk_whatsapp', setting('contact_whatsapp', '081234567890'))) ?: '081234567890';
+        $helpdeskWaDigits = preg_replace('/[^0-9]/', '', $helpdeskWa) ?: '081234567890';
+        if (str_starts_with($helpdeskWaDigits, '0')) {
+            $helpdeskWaLink = '62' . substr($helpdeskWaDigits, 1);
+        } elseif (str_starts_with($helpdeskWaDigits, '62')) {
+            $helpdeskWaLink = $helpdeskWaDigits;
+        } else {
+            $helpdeskWaLink = '62' . $helpdeskWaDigits;
+        }
+
+        $helpdeskEmail = trim((string) setting('helpdesk_email', setting('contact_email', 'info@uinssc.ac.id'))) ?: 'info@uinssc.ac.id';
+        $helpdeskLocation = trim((string) setting('helpdesk_location', setting('contact_office_location', 'Gedung Rektorat Kampus UIN Siber Syekh Nurjati Cirebon'))) ?: 'Gedung Rektorat Kampus UIN Siber Syekh Nurjati Cirebon';
+        $helpdeskHours = trim((string) setting('helpdesk_hours', setting('contact_service_hours', 'Senin – Jumat, 08.00 – 16.00 WIB'))) ?: 'Senin – Jumat, 08.00 – 16.00 WIB';
+    @endphp
+
     <!-- FOOTER HALAMAN (100% Identik dengan Login) -->
     <footer class="relative z-10 w-full py-3 px-6 select-none">
         <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-1.5 text-xs text-[#647B71]">
@@ -87,7 +103,7 @@
                     <span class="block text-xs font-bold text-[#0F3D2E] tracking-tight">Saluran Kontak Bantuan Resmi:</span>
 
                     <!-- WhatsApp Option -->
-                    <a href="https://wa.me/628557590909?text=Halo%20Admin%20SIPETRON%20UIN%20SSC,%20saya%20membutuhkan%20bantuan%20terkait%20layanan%20SIPETRON." 
+                    <a href="https://wa.me/{{ $helpdeskWaLink }}?text=Halo%20Admin%20E-VITRON%20UIN%20SSC,%20saya%20membutuhkan%20bantuan%20terkait%20layanan%20E-VITRON." 
                        target="_blank" 
                        rel="noopener noreferrer"
                        class="flex items-center justify-between p-3 rounded-[14px] border border-[#DCE7DF] hover:border-emerald-500 hover:bg-emerald-50/40 transition-all group">
@@ -99,7 +115,7 @@
                             </span>
                             <div class="text-left">
                                 <h4 class="text-xs font-bold text-[#0F3D2E] group-hover:text-emerald-800">WhatsApp Helpdesk E-VITRON</h4>
-                                <p class="text-[11px] text-[#647B71]">+62 855-7590-909 (Chat Langsung)</p>
+                                <p class="text-[11px] text-[#647B71]">{{ $helpdeskWa }} (Chat Langsung)</p>
                             </div>
                         </div>
                         <span class="text-xs font-bold text-emerald-700 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
@@ -118,16 +134,16 @@
                             </span>
                             <div class="text-left min-w-0">
                                 <h4 class="text-xs font-bold text-[#0F3D2E]">Email Resmi Layanan</h4>
-                                <p class="text-xs text-[#0F3D2E] font-semibold font-mono tracking-tight select-all">info@uinssc.ac.id</p>
+                                <p class="text-xs text-[#0F3D2E] font-semibold font-mono tracking-tight select-all">{{ $helpdeskEmail }}</p>
                             </div>
                         </div>
                         <div class="flex items-center gap-1.5 shrink-0 pl-12 sm:pl-0">
                             <!-- Tombol Salin Email -->
                             <button 
                                 type="button" 
-                                @click="copyEmail()"
+                                @click="copyEmail(@js($helpdeskEmail))"
                                 class="px-2.5 py-1.5 rounded-lg text-xs font-bold text-[#0F3D2E] bg-[#E8F3EC] hover:bg-[#D4E8DC] transition-colors flex items-center gap-1 cursor-pointer"
-                                title="Salin alamat email info@uinssc.ac.id">
+                                title="Salin alamat email {{ $helpdeskEmail }}">
                                 <svg class="w-3.5 h-3.5 text-[#0F3D2E]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                                     <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
@@ -136,7 +152,7 @@
                             </button>
                             <!-- Tombol Kirim Email Langsung -->
                             <a 
-                                href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=info@uinssc.ac.id&amp;su=Bantuan%20Layanan%20SIPETRON%20UIN%20SSC" target="_blank" rel="noopener noreferrer"
+                                href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to={{ $helpdeskEmail }}&amp;su=Bantuan%20Layanan%20E-VITRON%20UIN%20SSC" target="_blank" rel="noopener noreferrer"
                                 class="px-2.5 py-1.5 rounded-lg text-xs font-bold text-white bg-[#0F3D2E] hover:bg-[#0A2A20] transition-colors inline-flex items-center gap-1"
                                 title="Kirim email langsung melalui aplikasi email">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
@@ -154,7 +170,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
                         <p class="text-[11px] leading-relaxed">
-                            <strong>Layanan Langsung:</strong> Gedung Rektorat Kampus UIN Siber Syekh Nurjati Cirebon (UINSSC). Jam pelayanan: Senin – Jumat (08.00 – 16.00 WIB).
+                            <strong>Layanan Langsung:</strong> {{ $helpdeskLocation }}. Jam pelayanan: {{ $helpdeskHours }}.
                         </p>
                     </div>
 
