@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Submission;
 use App\Models\User;
-use App\Models\Videotron;
 use App\Notifications\AdminAlertNotification;
 use App\Notifications\SubmissionStatusNotification;
 use Illuminate\Database\Seeder;
@@ -17,7 +16,24 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Akun Admin E-VITRON
+        // 1. Seed data master perangkat videotron (aman dijalankan di semua environment)
+        $videotrons = VideotronSeeder::seedMasterVideotrons();
+
+        // Jangan pernah membuat akun demo berpassword lemah maupun pengajuan dummy di environment production
+        if (app()->isProduction()) {
+            $this->command?->warn('Akun demo dan pengajuan dummy dilewati pada environment production.');
+
+            return;
+        }
+
+        $v1 = $videotrons['masjid'];
+        $v2 = $videotrons['rektorat'];
+        $vSyariah = $videotrons['syariah'];
+        $vFITK = $videotrons['fitk'];
+        $vSiber = $videotrons['siber'];
+        $vFebi = $videotrons['febi'];
+
+        // 2. Akun Admin Demo E-VITRON (Hanya untuk local / testing)
         $admin = User::updateOrCreate(
             ['email' => 'admin@uin.ac.id'],
             [
@@ -31,7 +47,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // 2. Akun Mahasiswa Demo Utama (Ahmad Fadhil · Teknik Informatika)
+        // 3. Akun Mahasiswa Demo Utama (Ahmad Fadhil · Teknik Informatika)
         $userFadhil = User::updateOrCreate(
             ['identifier' => '2208101001'],
             [
@@ -45,7 +61,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // 3. Akun Mahasiswa Tambahan (Rizky Budianto · FITK)
+        // 4. Akun Mahasiswa Tambahan (Rizky Budianto · FITK)
         $userMhs = User::updateOrCreate(
             ['identifier' => '2388010999'],
             [
@@ -59,7 +75,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // 4. Akun Dosen
+        // 5. Akun Dosen
         User::updateOrCreate(
             ['identifier' => '198501012015011002'],
             [
@@ -72,67 +88,6 @@ class DatabaseSeeder extends Seeder
                 'auth_type' => 'campus_sso',
             ]
         );
-
-        // 5. Seeder Data Perangkat Videotron
-        $v1 = Videotron::updateOrCreate(['name' => 'Videotron Masjid'], [
-            'name' => 'Videotron Masjid',
-            'location' => 'Kampus Utama, depan masjid',
-            'resolution' => '1920x1080',
-            'orientation' => 'landscape',
-            'operating_hours' => '06.00 – 22.00 WIB',
-            'condition' => 'normal',
-            'is_active' => true,
-        ]);
-
-        $v2 = Videotron::updateOrCreate(['name' => 'Videotron Rektorat'], [
-            'name' => 'Videotron Rektorat',
-            'location' => 'Kampus Utama, dekat gedung rektorat',
-            'resolution' => '1920x1080',
-            'orientation' => 'landscape',
-            'operating_hours' => '06.00 – 22.00 WIB',
-            'condition' => 'normal',
-            'is_active' => true,
-        ]);
-
-        $vSyariah = Videotron::updateOrCreate(['name' => 'Videotron Syariah'], [
-            'name' => 'Videotron Syariah',
-            'location' => 'Fakultas Syariah & Hukum',
-            'resolution' => '960x480',
-            'orientation' => 'landscape',
-            'operating_hours' => '06.00 – 22.00 WIB',
-            'condition' => 'normal',
-            'is_active' => true,
-        ]);
-
-        $vFITK = Videotron::updateOrCreate(['name' => 'Videotron FITK'], [
-            'name' => 'Videotron FITK',
-            'location' => 'Gedung Fakultas Ilmu Tarbiyah & Keguruan',
-            'resolution' => '1200x720',
-            'orientation' => 'landscape',
-            'operating_hours' => '06.00 – 22.00 WIB',
-            'condition' => 'normal',
-            'is_active' => true,
-        ]);
-
-        $vSiber = Videotron::updateOrCreate(['name' => 'Videotron Siber'], [
-            'name' => 'Videotron Siber',
-            'location' => 'Gedung Siber & SSC',
-            'resolution' => '1152x768',
-            'orientation' => 'landscape',
-            'operating_hours' => '06.00 – 22.00 WIB',
-            'condition' => 'normal',
-            'is_active' => true,
-        ]);
-
-        $vFebi = Videotron::updateOrCreate(['name' => 'Videotron FEBI'], [
-            'name' => 'Videotron FEBI',
-            'location' => 'Outdoor FEBI, di atas gedung FEBI',
-            'resolution' => '1680x960',
-            'orientation' => 'landscape',
-            'operating_hours' => '07.00 – 24.00 WIB',
-            'condition' => 'normal',
-            'is_active' => true,
-        ]);
 
         // 6. Data Dummy Pengajuan Lengkap (Dimiliki oleh Akun Demo Ahmad Fadhil)
         // Card 1: Sosialisasi Penerimaan Mahasiswa Baru (Menunggu)

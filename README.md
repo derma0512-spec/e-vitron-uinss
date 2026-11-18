@@ -185,7 +185,7 @@ Pada `App\Services\SubmissionDecisionService::requestRevision()`:
 │   └── sipetron.php                           # Default penandatangan cetak laporan
 ├── database/
 │   ├── migrations/                            # 18 berkas migrasi skema & indeks performa jangka panjang
-│   └── seeders/                               # DatabaseSeeder, SettingSeeder, AdminNotificationSeeder, DemoTrendSeeder, FixNotificationFormatSeeder, RemoveDuplicateNotificationsSeeder
+│   └── seeders/                               # DatabaseSeeder, SettingSeeder, VideotronSeeder, AdminNotificationSeeder, DemoTrendSeeder, FixNotificationFormatSeeder, RemoveDuplicateNotificationsSeeder
 ├── public/
 │   ├── css/sipetron-custom.css                # Styling kustom Panel Admin Filament
 │   ├── downloads/                             # Template surat resmi: Template-Surat-Permohonan-Videotron-UINSSC.docx
@@ -204,7 +204,7 @@ Pada `App\Services\SubmissionDecisionService::requestRevision()`:
 │   ├── console.php                            # Command sipetron:prune-storage & jadwal harian 03:00 WIB
 │   └── web.php                                # Rute Auth, Beranda/Panduan, Pengajuan, Notifikasi, & Admin Export/Print
 ├── storage/app/private/surat_peminjaman/      # Penyimpanan privat PDF surat permohonan (non-public)
-└── tests/                                     # 1 Unit test + 14 Feature test suites (122 kasus uji)
+└── tests/                                     # 1 Unit test + 14 Feature test suites (123 kasus uji)
 ```
 
 ---
@@ -277,11 +277,12 @@ Panduan ini menjaga performa sistem saat diakses bersamaan oleh banyak pengguna 
    npm ci && npm run build
    php artisan migrate --force
    php artisan db:seed --class=SettingSeeder --force
+   php artisan db:seed --class=VideotronSeeder --force
    php artisan storage:link
    php artisan optimize
    php artisan filament:optimize
    ```
-   > ⚠️ **Keamanan Kredensial & Data Awal:** Jangan menjalankan `DatabaseSeeder` demo di server produksi yang sudah aktif. Jika akun demo sempat terpasang saat *staging*, segera ganti kredensial `admin@uin.ac.id` dengan email/password resmi pengelola (`role = 'admin'`, `auth_type = 'local'`, `account_status = 'approved'`) serta bersihkan akun uji (`2208101001`, `2388010999`, `198501012015011002`). Setiap kali mengubah `.env` di server, jalankan ulang `php artisan optimize:clear`, `php artisan optimize`, dan `php artisan filament:optimize`.
+   > ⚠️ **Keamanan Kredensial & Data Awal (`isProduction()` Guard):** [`DatabaseSeeder.php`](database/seeders/DatabaseSeeder.php) sudah dipasangi pengaman `app()->isProduction()` yang otomatis melewati pembuatan akun demo (`admin@uin.ac.id`, `2208101001`, `2388010999`, `198501012015011002`) serta pengajuan dummy ketika `APP_ENV=production` (hanya mengisi 6 master layar melalui [`VideotronSeeder.php`](database/seeders/VideotronSeeder.php)). Jika akun demo sempat terpasang saat *staging* atau *import* SQL lokal, segera ganti kredensial `admin@uin.ac.id` dengan email/password resmi pengelola (`role = 'admin'`, `auth_type = 'local'`, `account_status = 'approved'`) serta bersihkan akun uji. Setiap kali mengubah `.env` di server, jalankan ulang `php artisan optimize:clear`, `php artisan optimize`, dan `php artisan filament:optimize`.
 
 3. **Aktifkan Cron Scheduler (`sipetron:prune-storage`):**
    [`routes/console.php`](routes/console.php) menjadwalkan `sipetron:prune-storage` tiap `03:00` WIB untuk menghapus baris kedaluwarsa di tabel `sessions`, `cache`, dan `cache_locks`. Tambahkan cron berikut di server Linux (atau Task Scheduler pada Windows Server):
@@ -298,7 +299,7 @@ Panduan ini menjaga performa sistem saat diakses bersamaan oleh banyak pengguna 
 
 ## 🧪 Pengujian Otomatis & Standar Kualitas Kode
 
-Seluruh fitur utama, aturan bisnis, keamanan OWASP, dan tampilan responsif diuji otomatis menggunakan PHPUnit (**15 kelas uji, 122 kasus uji, 595 *assertions***):
+Seluruh fitur utama, aturan bisnis, keamanan OWASP, dan tampilan responsif diuji otomatis menggunakan PHPUnit (**15 kelas uji, 123 kasus uji, 601 *assertions***):
 
 ```bash
 # Menjalankan seluruh rangkaian pengujian (menggunakan SQLite :memory: sesuai phpunit.xml)

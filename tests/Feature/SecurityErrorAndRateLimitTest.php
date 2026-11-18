@@ -397,4 +397,24 @@ class SecurityErrorAndRateLimitTest extends TestCase
         $this->assertDatabaseMissing('sessions', ['id' => 'expired_session_1']);
         $this->assertDatabaseHas('sessions', ['id' => 'active_session_1']);
     }
+
+    public function test_database_seeder_skips_demo_accounts_and_dummy_submissions_in_production(): void
+    {
+        $originalEnvironment = $this->app['env'];
+
+        try {
+            $this->app['env'] = 'production';
+            $this->assertTrue($this->app->isProduction());
+
+            $this->artisan('db:seed', ['--force' => true])
+                ->assertExitCode(0);
+
+            $this->assertSame(6, Videotron::count());
+            $this->assertSame(0, User::count());
+            $this->assertDatabaseMissing('users', ['email' => 'admin@uin.ac.id']);
+            $this->assertSame(0, Submission::count());
+        } finally {
+            $this->app['env'] = $originalEnvironment;
+        }
+    }
 }
