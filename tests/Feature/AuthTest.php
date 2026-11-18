@@ -315,7 +315,7 @@ class AuthTest extends TestCase
         $demoLoginView->assertStatus(200);
         $demoLoginView->assertSee('Akses Cepat Demo');
         $demoLoginView->assertSee('Pemohon Demo');
-        $demoLoginView->assertSee('Admin Kurator');
+        $demoLoginView->assertSee('Admin E-VITRON');
         $demoLoginView->assertSee('2208101001');
 
         $this->artisan('db:seed', ['--class' => 'Database\\Seeders\\ExhibitionDemoSeeder', '--force' => true])
@@ -323,6 +323,7 @@ class AuthTest extends TestCase
 
         $this->assertDatabaseHas('users', [
             'email' => 'admin.evitron@uinssc.ac.id',
+            'name' => 'Admin E-VITRON',
             'role' => 'admin',
         ]);
         $this->assertDatabaseHas('users', [

@@ -31,12 +31,12 @@ class ExhibitionDemoSeeder extends Seeder
         $admin = User::updateOrCreate(
             ['email' => strtolower($adminEmail)],
             [
-                'name' => 'Admin PUSTIKOM E-VITRON',
+                'name' => 'Admin E-VITRON',
                 'password' => Hash::make($adminPassword),
                 'role' => 'admin',
                 'identifier' => 'ADM-001',
                 'phone' => '081234567890',
-                'unit_or_prodi' => 'PUSTIKOM UINSSC',
+                'unit_or_prodi' => 'Tim Pengelola E-VITRON UIN SSC',
                 'auth_type' => 'local',
                 'account_status' => 'approved',
             ]
