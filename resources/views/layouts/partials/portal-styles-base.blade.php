@@ -1,6 +1,7 @@
     <style>
         [x-cloak] { display: none !important; }
         html {
+            color-scheme: light only;
             overflow-x: hidden;
             scroll-behavior: smooth;
             scrollbar-width: thin;

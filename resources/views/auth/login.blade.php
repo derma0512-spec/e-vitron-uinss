@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light only">
     <title>Masuk | E-VITRON - Layanan Pengajuan Penayangan Videotron</title>
 
     <!-- Favicon E-VITRON -->
@@ -39,6 +40,10 @@
 
     <style>
         [x-cloak] { display: none !important; }
+
+        html, :root {
+            color-scheme: light only;
+        }
 
         body { 
             font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif; 

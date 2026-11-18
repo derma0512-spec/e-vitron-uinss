@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light only">
     <title>Registrasi Akun Pemohon | E-VITRON - UIN Siber Cirebon</title>
 
     <!-- Favicon E-VITRON -->
@@ -41,6 +42,7 @@
         [x-cloak] { display: none !important; }
 
         html {
+            color-scheme: light only;
             background-color: #F5F8F5;
             min-height: 100%;
         }

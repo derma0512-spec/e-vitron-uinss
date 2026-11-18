@@ -1,8 +1,10 @@
+<meta name="color-scheme" content="light only">
 <style id="sipetron-critical-anti-flash">
     /* Kunci warna dasar & tata letak sejak milidetik ke-0 agar 0% jepret putih (FOUC) */
     html,
     body,
     .fi-body {
+        color-scheme: light only !important;
         background-color: #F8FAF9 !important;
     }
 
