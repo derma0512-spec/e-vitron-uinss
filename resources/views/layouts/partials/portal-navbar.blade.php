@@ -16,9 +16,9 @@
         <!-- Logo E-VITRON: Center di Mobile, Kiri di Desktop -->
         <div class="flex-1 md:flex-initial flex justify-center md:justify-start">
           <a href="{{ route('home') }}" class="flex items-center gap-2.5 sm:gap-3 group select-none">
-            <img src="{{ asset('images/sipetron-icon.png') }}" alt="Logo E-VITRON" class="h-9 w-9 sm:h-10 sm:w-10 object-contain transition-transform duration-200 group-hover:scale-105" />
+            <img src="{{ asset('images/sipetron-icon.png') }}" alt="Logo E-VITRON" class="evitron-nav-logo h-9 w-9 sm:h-10 sm:w-10 object-contain transition-transform duration-200 group-hover:scale-105" />
             <div class="flex flex-col justify-center leading-none">
-              <span class="font-montserrat text-[19px] sm:text-[21px] font-extrabold tracking-tight text-[#0E4D3C] leading-none">E-VITRON</span>
+              <span class="evitron-nav-title font-montserrat text-[19px] sm:text-[21px] font-extrabold tracking-tight text-[#0E4D3C] leading-none">E-VITRON</span>
               <!-- Teks sub di Mobile lebih ringkas, Desktop lengkap -->
               <span class="evitron-nav-subtitle-short text-[9px] sm:text-[9.5px] font-semibold text-[#B88219] tracking-tight mt-1 leading-none md:hidden">Pengajuan Videotron</span>
               <span class="evitron-nav-subtitle hidden md:inline-block text-[9.5px] font-semibold text-[#B88219] tracking-tight mt-1 leading-none">Layanan Pengajuan Penayangan Videotron</span>
@@ -73,7 +73,7 @@
         </nav>
 
         <!-- KANAN: Notifikasi (Mobile & Desktop) & Profil (Desktop Only) -->
-        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div class="evitron-nav-actions flex items-center gap-2 sm:gap-3 shrink-0">
 
           @auth
             {{-- ===== NOTIFIKASI TRIGGER ===== --}}
@@ -104,7 +104,7 @@
             </div>
 
             <!-- Profil Dropdown Khusus Layar Tablet/Desktop (md:block) -->
-            <div class="hidden md:flex items-center gap-3">
+            <div class="evitron-nav-profile-wrap hidden md:flex items-center gap-3">
               <div class="h-7 w-px bg-[#E3E9E6]"></div>
 
               {{-- ===== PROFIL DROPDOWN DESKTOP ===== --}}
@@ -112,13 +112,13 @@
                 <button id="profile-btn" type="button"
                   class="flex h-[44px] items-center gap-[10px] rounded-[12px] border border-transparent bg-transparent px-2.5 py-1.5 hover:bg-[#F1F6F3] active:scale-[0.98] transition-all duration-150 outline-none focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0E4D3C] focus-visible:outline-offset-2 select-none"
                   aria-label="Menu profil pengguna" aria-expanded="false" aria-haspopup="true" aria-controls="profile-panel">
-                  <div class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0E4D3C] text-[11px] font-bold text-white shadow-xs select-none transition-transform duration-200 group-hover/profile:scale-105 overflow-hidden">
+                  <div class="evitron-profile-avatar relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0E4D3C] text-[11px] font-bold text-white shadow-xs select-none transition-transform duration-200 group-hover/profile:scale-105 overflow-hidden">
                     @if(!empty($user?->avatar_url))
                       <img src="{{ $user->avatar_url }}" alt="{{ $userName }}" class="absolute inset-0 h-full w-full object-cover rounded-full" onerror="this.remove()">
                     @endif
                     <span>{{ $initials }}</span>
                   </div>
-                  <span class="inline-block text-[13.5px] font-bold text-[#123F33] leading-none">{{ $userName }}</span>
+                  <span class="evitron-profile-name inline-block text-[13.5px] font-bold text-[#123F33] leading-none">{{ $userName }}</span>
                   <svg class="h-3.5 w-3.5 text-[#5B7A70] transition-transform duration-150 stroke-[1.8]" id="profile-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
                   </svg>

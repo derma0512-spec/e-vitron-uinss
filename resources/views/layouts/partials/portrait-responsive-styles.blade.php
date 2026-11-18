@@ -35,8 +35,17 @@
 
     @media (min-width: 768px) and (max-width: 1023px) and (orientation: portrait) {
         .evitron-navbar-inner {
-            padding-left: 1.25rem !important;
-            padding-right: 1.25rem !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+
+        .evitron-nav-logo {
+            width: 2rem !important;
+            height: 2rem !important;
+        }
+
+        .evitron-nav-title {
+            font-size: 1.0625rem !important;
         }
 
         .evitron-nav-subtitle {
@@ -45,15 +54,50 @@
 
         .evitron-nav-subtitle-short {
             display: inline-block !important;
+            font-size: 8.5px !important;
             white-space: nowrap !important;
         }
 
         .evitron-nav-list {
-            gap: 1.3rem !important;
+            gap: 0.875rem !important;
         }
 
         .evitron-nav-list .nav-link {
-            font-size: 0.8125rem !important;
+            font-size: 0.78125rem !important;
+            white-space: nowrap !important;
+        }
+
+        .evitron-nav-actions {
+            gap: 0.45rem !important;
+        }
+
+        #notif-btn {
+            width: 2.125rem !important;
+            height: 2.125rem !important;
+        }
+
+        .evitron-nav-profile-wrap {
+            gap: 0.5rem !important;
+        }
+
+        #profile-btn {
+            height: 2.375rem !important;
+            padding-left: 0.4rem !important;
+            padding-right: 0.4rem !important;
+            gap: 0.45rem !important;
+        }
+
+        .evitron-profile-avatar {
+            width: 1.75rem !important;
+            height: 1.75rem !important;
+            font-size: 10px !important;
+        }
+
+        .evitron-profile-name {
+            font-size: 0.78125rem !important;
+            max-width: 120px !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
             white-space: nowrap !important;
         }
 
