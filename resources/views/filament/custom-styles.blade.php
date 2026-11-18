@@ -61,51 +61,15 @@
 @if(config('services.demo.quick_login'))
 <style id="sipetron-demo-portrait-layout" data-testid="demo-admin-kiosk-viewport">
     /* Khusus Mode Demo Pameran (Railway): tata letak Admin 100% tajam tanpa zoom-out untuk TV Standing Kiosk Portrait (1080x1920 / 864x1536) */
-    @media (min-width: 768px) and (orientation: portrait) {
-        html,
-        body,
-        .fi-body,
-        html body .fi-layout {
-            background: linear-gradient(to right, #0F3D2E 0, #0F3D2E 15.5rem, #F8FAF9 15.5rem, #F8FAF9 100%) !important;
-        }
-
-        html body .fi-layout {
-            display: flex !important;
-            flex-direction: row !important;
-            width: 100% !important;
-            min-height: 100vh !important;
-        }
-
-        html body aside.fi-sidebar,
-        html body aside.fi-main-sidebar {
-            position: sticky !important;
-            top: 0 !important;
-            width: 15.5rem !important;
-            min-width: 15.5rem !important;
-            max-width: 15.5rem !important;
-            height: 100vh !important;
-            max-height: 100vh !important;
-            transform: none !important;
-            flex-shrink: 0 !important;
-            display: flex !important;
-            z-index: 30 !important;
-        }
-
-        .fi-sidebar-close-overlay,
-        .fi-topbar nav > button.fi-icon-btn {
+    @media (min-width: 1024px) and (orientation: portrait) {
+        .fi-topbar-open-sidebar-btn,
+        .fi-topbar-close-sidebar-btn {
             display: none !important;
         }
+    }
 
-        html body .fi-main-ctn {
-            flex: 1 1 0% !important;
-            min-width: 0 !important;
-            width: calc(100% - 15.5rem) !important;
-            max-width: calc(100% - 15.5rem) !important;
-            margin: 0 !important;
-            opacity: 1 !important;
-        }
-
-        /* 5 Kartu KPI: 3 kartu atas + 2 kartu bawah agar tidak terpotong */
+    @media (min-width: 768px) and (orientation: portrait) {
+        /* 5 Kartu KPI: 3 kartu atas + 2 kartu bawah agar lebar lega dan teks tidak terpotong */
         body .fi-dashboard-page .sipetron-grid-stats {
             grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
             gap: 0.75rem !important;
@@ -125,19 +89,53 @@
             grid-template-columns: minmax(0, 1fr) !important;
             gap: 1.125rem !important;
         }
-    }
 
-    @media (min-width: 768px) and (max-width: 959px) and (orientation: portrait) {
-        body .fi-dashboard-page .sipetron-grid-stats {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        /* Rampingkan proporsi kolom tabel Pengajuan & Riwayat agar 100% muat tanpa terpotong di bawah kolom Aksi */
+        .sipetron-table {
+            min-width: 0 !important;
+            width: 100% !important;
         }
 
-        body .fi-dashboard-page .sipetron-grid-stats > .sipetron-stat-card:nth-child(-n+4) {
-            grid-column: span 1 / span 1 !important;
+        .sipetron-table col.sipetron-col-ticket {
+            width: 118px !important;
         }
 
-        body .fi-dashboard-page .sipetron-grid-stats > .sipetron-stat-card:nth-child(5) {
-            grid-column: span 2 / span 2 !important;
+        .sipetron-table col.sipetron-col-requester {
+            width: 112px !important;
+        }
+
+        .sipetron-table col.sipetron-col-file {
+            width: 100px !important;
+        }
+
+        .sipetron-table col.sipetron-col-status {
+            width: 114px !important;
+        }
+
+        .sipetron-table col.sipetron-col-action {
+            width: 72px !important;
+        }
+
+        .sipetron-col-ticket {
+            padding-left: 0.65rem !important;
+            padding-right: 0.45rem !important;
+        }
+
+        .sipetron-col-content,
+        .sipetron-col-requester {
+            padding-left: 0.45rem !important;
+            padding-right: 0.45rem !important;
+        }
+
+        .sipetron-col-file,
+        .sipetron-col-status {
+            padding-left: 0.3rem !important;
+            padding-right: 0.3rem !important;
+        }
+
+        .sipetron-col-action {
+            padding-left: 0.3rem !important;
+            padding-right: 0.5rem !important;
         }
     }
 </style>
