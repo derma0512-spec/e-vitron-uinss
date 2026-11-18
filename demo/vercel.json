@@ -1,4 +1,21 @@
 {
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/notifikasi/cek-terbaru", "destination": "/notifikasi/cek-terbaru.json" },
+    { "source": "/login", "destination": "/login.html" },
+    { "source": "/register", "destination": "/register.html" },
+    { "source": "/beranda", "destination": "/beranda.html" },
+    { "source": "/informasi", "destination": "/informasi.html" },
+    { "source": "/pengajuan/baru", "destination": "/pengajuan-baru.html" },
+    { "source": "/pengajuan/:ticket", "destination": "/pengajuan.html" },
+    { "source": "/pengajuan", "destination": "/pengajuan.html" },
+    { "source": "/notifikasi", "destination": "/pengajuan.html" },
+    { "source": "/admin/submissions", "destination": "/admin-submissions.html" },
+    { "source": "/admin/users", "destination": "/admin-users.html" },
+    { "source": "/admin/videotrons", "destination": "/admin-videotrons.html" },
+    { "source": "/admin/history-and-recap", "destination": "/admin-recap.html" },
+    { "source": "/admin/manage-settings", "destination": "/admin-settings.html" },
+    { "source": "/admin", "destination": "/admin.html" }
+  ]
 }

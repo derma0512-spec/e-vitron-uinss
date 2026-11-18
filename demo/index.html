@@ -3,23 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-VITRON — Sistem Layanan & Kurasi Penayangan Videotron UIN Siber Syekh Nurjati Cirebon</title>
-    <link rel="icon" type="image/png" href="images/sipetron-icon.png">
+    <title>Masuk | E-VITRON - Layanan Pengajuan Penayangan Videotron</title>
+
+    <!-- Favicon E-VITRON -->
+    <link rel="icon" type="image/png" href="/images/sipetron-icon.png?v=2">
+    <link rel="shortcut icon" type="image/png" href="/images/sipetron-icon.png?v=2">
+    <link rel="apple-touch-icon" href="/images/sipetron-icon.png?v=2">
+
+    <!-- Preconnect CDN & Fonts (Zero DNS/TLS Delay) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="/js/tailwind.js"></script>
+
+    <!-- Alpine.js -->
+    <script defer src="/js/alpine.min.js"></script>
+
+    <!-- Cegah Akses Balik / BFCache: Jika pengguna sudah login lalu klik Back di browser, otomatis diarahkan kembali ke halaman pengaju/admin -->
+    <script>
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted || (window.performance && window.performance.getEntriesByType("navigation")[0]?.type === "back_forward")) {
+                window.location.reload();
+            }
+        });
+    </script>
+    
+    <!-- Google Fonts: Montserrat (Heading) & Plus Jakarta Sans (Body) -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="js/tailwind.js"></script>
-    <script defer src="js/alpine.min.js"></script>
+
     <style>
         [x-cloak] { display: none !important; }
-        body {
-            font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
-            background-color: #F4F8F6;
+
+        body { 
+            font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif; 
+            background-color: #F5F8F5;
+            background-image: 
+                radial-gradient(circle at 12% 15%, rgba(217, 164, 65, 0.08) 0%, transparent 35%),
+                radial-gradient(circle at 88% 20%, rgba(217, 164, 65, 0.09) 0%, transparent 40%),
+                radial-gradient(circle at 50% 85%, rgba(15, 61, 46, 0.05) 0%, transparent 45%);
             color: #1A332C;
+            margin: 0;
+            padding: 0;
         }
+
         .font-montserrat {
             font-family: 'Montserrat', 'Plus Jakarta Sans', sans-serif;
         }
+
+        /* Islamic Geometric Ornament Pattern (Selaras dengan Beranda & Portal UIN SSC) */
         .ornament-pattern {
             pointer-events: none;
             position: absolute;
@@ -28,942 +60,714 @@
             mask-image: radial-gradient(circle at center, black 25%, transparent 68%);
             -webkit-mask-image: radial-gradient(circle at center, black 25%, transparent 68%);
         }
-        .btn-hero-primary {
-            background: linear-gradient(135deg, #F3C45A 0%, #D9A441 55%, #C68D24 100%);
-            transition: all 0.25s ease;
+
+        /* Kartu Manfaat (Tampil Langsung Tanpa Efek Memudar) */
+        .benefit-card {
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease;
         }
-        .btn-hero-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 8px 20px rgba(217, 164, 65, 0.35);
+
+        .benefit-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 22px -3px rgba(15, 61, 46, 0.10);
+            border-color: rgba(15, 61, 46, 0.28);
+        }
+
+        /* Hilangkan warna autofill buatan browser */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus {
+            -webkit-box-shadow: 0 0 0px 1000px #FFFFFF inset !important;
+            -webkit-text-fill-color: #0F3D2E !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+
+        /* Hilangkan ikon mata & clear bawaan browser (Microsoft Edge & Chrome) agar tidak bertumpuk */
+        input::-ms-reveal,
+        input::-ms-clear {
+            display: none !important;
         }
     </style>
+<script id="browser-logger-active">
+(function() {
+    const ENDPOINT = '/_boost/browser-logs';
+    const logQueue = [];
+    let flushTimeout = null;
+    const captureTypes = ["error","warning","info","log","debug","table"];
+
+    console.log('🔍 Browser logger active (MCP server detected). Posting to: ' + ENDPOINT);
+
+    // Store original console methods
+    const originalConsole = {
+        log: console.log,
+        debug: console.debug,
+        info: console.info,
+        error: console.error,
+        warn: console.warn,
+        table: console.table
+    };
+
+    // Walk own enumerable keys so JSON.stringify cannot auto-invoke a proxy fake toJSON (e.g. Livewire's `$wire`) and fire a real request.
+    function toSafeValue(value, seen) {
+        if (value === null || typeof value !== 'object') {
+            return value;
+        }
+        if (value instanceof Error) {
+            return { name: value.name, message: value.message, stack: value.stack };
+        }
+        // Date has no own enumerable keys, so the walk below would collapse it to {}.
+        if (value instanceof Date) {
+            return value.toISOString();
+        }
+        if (seen.has(value)) {
+            return '[Circular]';
+        }
+        seen.add(value);
+        if (Array.isArray(value)) {
+            return value.map((item) => toSafeValue(item, seen));
+        }
+        const plain = {};
+        for (const key of Object.keys(value)) {
+            if (key === 'toJSON') continue;
+            try {
+                plain[key] = toSafeValue(value[key], seen);
+            } catch (e) {
+                plain[key] = '[Unreadable]';
+            }
+        }
+        return plain;
+    }
+
+    // Helper to safely stringify values
+    function safeStringify(obj) {
+        return JSON.stringify(toSafeValue(obj, new WeakSet()));
+    }
+
+    // Normalize log type for consistency (e.g., 'warn' to 'warning')
+    function normalizeType(type) {
+        return type === 'warn' ? 'warning' : type;
+    }
+
+    // Determine if a log type should be captured based on configured levels
+    function shouldCapture(type) {
+        return captureTypes.includes(normalizeType(type));
+    }
+
+    // Batch and send logs
+    function flushLogs() {
+        if (logQueue.length === 0) return;
+
+        const batch = logQueue.splice(0, logQueue.length);
+
+        fetch(ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ logs: batch })
+        }).catch(err => {
+            // Silently fail to avoid infinite loops
+            originalConsole.error('Failed to send logs:', err);
+        });
+    }
+
+    // Debounced flush (100ms)
+    function scheduleFlush() {
+        if (flushTimeout) clearTimeout(flushTimeout);
+        flushTimeout = setTimeout(flushLogs, 100);
+    }
+
+    // Intercept console methods
+    ['log', 'debug', 'info', 'error', 'warn', 'table'].forEach(method => {
+        console[method] = function(...args) {
+            // Call original method
+            originalConsole[method].apply(console, args);
+
+            // Capture log data
+            try {
+                if (!shouldCapture(method)) {
+                    return;
+                }
+
+                logQueue.push({
+                    type: method,
+                    timestamp: new Date().toISOString(),
+                    data: args.map(arg => {
+                        try {
+                            return typeof arg === 'object' ? JSON.parse(safeStringify(arg)) : arg;
+                        } catch (e) {
+                            return String(arg);
+                        }
+                    }),
+                    url: window.location.href,
+                    userAgent: navigator.userAgent
+                });
+
+                scheduleFlush();
+            } catch (e) {
+                // Fail silently
+            }
+        };
+    });
+
+    // Global error handlers for uncaught errors
+    const originalOnError = window.onerror;
+    window.onerror = function boostErrorHandler(errorMsg, url, lineNumber, colNumber, error) {
+        try {
+            if (shouldCapture('error')) {
+                logQueue.push({
+                    type: 'uncaught_error',
+                    timestamp: new Date().toISOString(),
+                    data: [{
+                        message: errorMsg,
+                        filename: url,
+                        lineno: lineNumber,
+                        colno: colNumber,
+                        error: error ? {
+                            name: error.name,
+                            message: error.message,
+                            stack: error.stack
+                        } : null
+                    }],
+                    url: window.location.href,
+                    userAgent: navigator.userAgent
+                });
+
+                scheduleFlush();
+            }
+
+        } catch (e) {
+            // Fail silently
+        }
+
+        // Call original handler if it exists
+        if (originalOnError && typeof originalOnError === 'function') {
+            return originalOnError(errorMsg, url, lineNumber, colNumber, error);
+        }
+
+        // Let the error continue to propagate
+        return false;
+    }
+    window.addEventListener('error', (event) => {
+        try {
+            if (!shouldCapture('error')) {
+                return false;
+            }
+
+            logQueue.push({
+                type: 'window_error',
+                timestamp: new Date().toISOString(),
+                data: [{
+                    message: event.message,
+                    filename: event.filename,
+                    lineno: event.lineno,
+                    colno: event.colno,
+                    error: event.error ? {
+                        name: event.error.name,
+                        message: event.error.message,
+                        stack: event.error.stack
+                    } : null
+                }],
+                url: window.location.href,
+                userAgent: navigator.userAgent
+            });
+
+            scheduleFlush();
+        } catch (e) {
+            // Fail silently
+        }
+
+        // Let the error continue to propagate
+        return false;
+    });
+    window.addEventListener('unhandledrejection', (event) => {
+        try {
+            if (!shouldCapture('error')) {
+                return false;
+            }
+
+            logQueue.push({
+                type: 'error',
+                timestamp: new Date().toISOString(),
+                data: [{
+                    message: 'Unhandled Promise Rejection',
+                    reason: toSafeValue(event.reason, new WeakSet())
+                }],
+                url: window.location.href,
+                userAgent: navigator.userAgent
+            });
+
+            scheduleFlush();
+        } catch (e) {
+            // Fail silently
+        }
+
+        // Let the rejection continue to propagate
+        return false;
+    });
+
+    // Flush on page unload
+    window.addEventListener('beforeunload', () => {
+        if (logQueue.length > 0) {
+            navigator.sendBeacon(ENDPOINT, JSON.stringify({ logs: logQueue }));
+        }
+    });
+})();
+</script>
 </head>
-<body class="min-h-screen flex flex-col justify-between selection:bg-[#0F3D2E] selection:text-white" x-data="evitronDemoApp()">
+<body class="min-h-screen bg-[#F5F8F5] flex flex-col justify-between relative overflow-x-hidden selection:bg-[#0F3D2E] selection:text-white"
+    x-data="{
+        identifier: '',
+        password: '',
+        showPassword: false,
+        showHelpModal: false,
+        copiedEmail: false,
+        copyEmail() {
+            const email = 'info@uinssc.ac.id';
+            const done = () => { this.copiedEmail = true; setTimeout(() => { this.copiedEmail = false; }, 2500); };
+            const fallback = () => {
+                const t = document.createElement('textarea');
+                t.value = email; t.setAttribute('readonly', '');
+                t.style.position = 'fixed'; t.style.opacity = '0';
+                document.body.appendChild(t); t.select();
+                try { document.execCommand('copy'); done(); } catch (err) { console.warn('[E-VITRON] Clipboard fallback failed:', err); }
+                document.body.removeChild(t);
+            };
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(email).then(done).catch(fallback);
+            } else {
+                fallback();
+            }
+        }
+    }"
+    @keydown.escape.window="showHelpModal = false">
 
-    <!-- TOP BAR: INTERACTIVE DEMO CONTROLLER -->
-    <div class="bg-[#0A291F] text-white text-xs border-b border-[#D9A441]/30 sticky top-0 z-50">
-        <div class="max-w-[1400px] mx-auto px-4 sm:px-8 py-2 flex flex-wrap items-center justify-between gap-2">
-            <div class="flex items-center gap-2">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#D9A441] text-[#0F3D2E]">
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#0F3D2E] animate-ping"></span>
-                    LIVE DEMO INTERAKTIF
-                </span>
-                <span class="hidden md:inline text-emerald-100/90">
-                    E-VITRON UIN Siber Syekh Nurjati Cirebon · Laravel 13 &amp; Filament v3
-                </span>
-            </div>
+    
+    <div class="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+        <!-- Area 1 (Situ): Sebelah Kanan Judul E-VITRON / Ruang Kosong Atas -->
+        <div class="ornament-pattern absolute left-[32%] sm:left-[38%] -top-8 w-64 h-64 sm:w-80 sm:h-80 opacity-20"></div>
 
-            <div class="flex flex-wrap items-center gap-1.5">
-                <span class="text-[11px] text-emerald-200/80 mr-1 hidden sm:inline">Ganti Peran Cepat:</span>
-                <button type="button" @click="quickLogin('mahasiswa')"
-                    :class="currentUser && currentUser.role === 'mahasiswa' ? 'bg-emerald-600 text-white border-emerald-400' : 'bg-white/10 text-emerald-100 border-white/15 hover:bg-white/20'"
-                    class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition cursor-pointer">
-                    Mahasiswa (SSO)
-                </button>
-                <button type="button" @click="quickLogin('dosen')"
-                    :class="currentUser && currentUser.role === 'dosen' ? 'bg-emerald-600 text-white border-emerald-400' : 'bg-white/10 text-emerald-100 border-white/15 hover:bg-white/20'"
-                    class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition cursor-pointer">
-                    Dosen (SSO)
-                </button>
-                <button type="button" @click="quickLogin('admin')"
-                    :class="currentUser && currentUser.role === 'admin' ? 'bg-[#D9A441] text-[#0F3D2E] border-[#F3C45A]' : 'bg-white/10 text-amber-200 border-amber-400/30 hover:bg-white/20'"
-                    class="px-2.5 py-1 rounded-lg text-[11px] font-bold border transition cursor-pointer">
-                    Panel Admin (Filament)
-                </button>
-                <template x-if="currentUser">
-                    <button type="button" @click="logout()"
-                        class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-rose-500/20 text-rose-200 border border-rose-400/30 hover:bg-rose-500/30 transition cursor-pointer">
-                        Layar Login
-                    </button>
-                </template>
-                <a href="https://github.com/derma0512-spec/e-vitron-uinss" target="_blank" rel="noopener"
-                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white/15 hover:bg-white/25 text-white border border-white/20 transition">
-                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                    <span>Source Code</span>
-                </a>
-            </div>
-        </div>
+        <!-- Area 2 (Sama Situ): Di Bawah 3 Kartu Manfaat / Ruang Kosong Bawah Sebelum Footer -->
+        <div class="ornament-pattern absolute left-6 sm:left-20 -bottom-12 w-96 h-60 sm:w-[500px] sm:h-64 opacity-25"></div>
+
+        <!-- Area 3 (Bawah Kartu Login): Ruang Kosong di Bawah Kartu Login Sebelum Footer -->
+        <div class="ornament-pattern absolute right-4 sm:right-12 -bottom-14 w-80 h-60 sm:w-96 sm:h-64 opacity-25"></div>
+
+        <!-- Aksen Sudut Kanan Atas (Sangat Lembut untuk Keseimbangan) -->
+        <div class="ornament-pattern absolute -right-20 -top-20 w-80 h-80 sm:w-96 sm:h-96 opacity-25"></div>
     </div>
 
-    <!-- TOAST FEEDBACK -->
-    <div x-cloak x-show="toast.visible" x-transition
-        class="fixed bottom-5 right-5 z-50 max-w-md bg-[#0F3D2E] text-white px-4 py-3.5 rounded-2xl shadow-2xl border border-[#D9A441]/50 flex items-start gap-3">
-        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#D9A441] text-[#0F3D2E] font-extrabold text-xs shrink-0 mt-0.5">✓</span>
-        <div class="text-xs leading-relaxed">
-            <div class="font-bold text-sm text-[#F3C45A]" x-text="toast.title"></div>
-            <div class="text-emerald-50 mt-0.5" x-text="toast.message"></div>
-        </div>
-    </div>
+    <!-- MAIN CONTAINER (1240px max, Terpusat, Proporsional dan Pas di Layar Laptop Tanpa Scroll) -->
+    <main class="relative z-10 mx-auto w-full max-w-[1240px] px-4 sm:px-8 py-3 sm:py-3 lg:py-4 flex-1 flex items-center justify-center">
+        
+        <div class="w-full grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-6 lg:gap-12 items-center">
 
-    <!-- =========================================================
-         VIEW 1: AUTHENTIC LOGIN & BRIDGE SSO / REGISTER SCREEN
-    ========================================================== -->
-    <template x-if="!currentUser">
-        <main class="relative flex-1 flex items-center justify-center py-6 px-4 sm:px-8 overflow-hidden">
-            <div class="ornament-pattern left-[35%] -top-8 w-72 h-72 opacity-20"></div>
-            <div class="ornament-pattern left-10 -bottom-10 w-96 h-64 opacity-25"></div>
-            <div class="ornament-pattern right-10 -bottom-12 w-80 h-60 opacity-25"></div>
+            <!-- =========================================================
+                 KOLOM KIRI: BRANDING & GAMBAR HERO
+                 ========================================================= -->
+            <div class="lg:col-span-7 flex flex-col justify-between space-y-2.5 sm:space-y-3.5 select-none">
+                
+                <!-- Tampilan Khusus Mobile (< sm): Crown Lockup Simetris, Elegan, dan Pas 1 Layar -->
+                <div class="sm:hidden flex flex-col items-center text-center select-none pt-1">
+                    <img src="/images/sipetron-icon.png?v=3" 
+                         alt="Logo E-VITRON" 
+                         class="h-11 w-auto object-contain shrink-0 mb-1.5" />
+                    <h1 class="font-montserrat text-[26px] font-black tracking-tight text-[#0F3D2E] leading-none">
+                        E-VITRON
+                    </h1>
+                    <p class="text-xs font-semibold text-[#1A332C] mt-1 tracking-tight">
+                        UIN Siber Syekh Nurjati Cirebon
+                    </p>
+                    <div class="mt-1.5 w-10 h-0.5 rounded-full bg-[#D9A441]"></div>
+                </div>
 
-            <div class="relative z-10 mx-auto w-full max-w-[1240px] grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center">
-                <!-- Kolom Kiri: Branding & Hero -->
-                <div class="lg:col-span-7 flex flex-col justify-between space-y-3.5">
-                    <div class="flex items-center gap-3.5">
-                        <img src="images/sipetron-icon.png" alt="Logo E-VITRON" class="h-11 w-auto object-contain shrink-0" />
-                        <div class="flex flex-col justify-center leading-tight">
-                            <span class="text-[13px] font-semibold text-[#1A332C]">UIN Siber</span>
-                            <span class="text-[15px] font-bold text-[#0F3D2E] tracking-tight">Syekh Nurjati Cirebon</span>
+                <!-- Tampilan Tablet & Desktop (sm: dan lg:) — 100% UTUH PERSIS ASLI -->
+                <div class="hidden sm:flex items-center gap-3.5">
+                    <img src="/images/sipetron-icon.png?v=3" 
+                         alt="Logo E-VITRON UIN Siber Syekh Nurjati Cirebon" 
+                         class="h-11 w-auto object-contain shrink-0" />
+                    <div class="flex flex-col justify-center leading-tight">
+                        <span class="text-[13px] font-semibold text-[#1A332C]">UIN Siber</span>
+                        <span class="text-[15px] font-bold text-[#0F3D2E] tracking-tight">Syekh Nurjati Cirebon</span>
+                    </div>
+                </div>
+
+                <div class="hidden sm:block">
+                    <h1 class="font-montserrat text-3xl lg:text-[42px] font-black tracking-tight text-[#0F3D2E] leading-none">
+                        E-VITRON
+                    </h1>
+                    
+                    
+                    <div class="mt-1.5 mb-1.5 w-12 h-1 rounded-full bg-[#D9A441]"></div>
+
+                    <h2 class="text-base lg:text-[18px] font-bold text-[#0F3D2E] tracking-tight">
+                        Layanan Pengajuan Penayangan Videotron
+                    </h2>
+                    
+                    <p class="mt-0.5 text-[13px] text-[#647B71] font-medium leading-relaxed max-w-xl">
+                        Media terpadu untuk publikasi informasi dan kegiatan kampus.
+                    </p>
+                </div>
+
+                <!-- 3. Gambar Hero Kampus & Videotron (Ditampilkan pada Layar Tablet & Desktop) -->
+                <div class="hidden sm:block w-full aspect-[16/9] max-h-[175px] sm:max-h-[195px] lg:max-h-[235px] rounded-[16px] overflow-hidden border border-[#DCE7DF] shadow-sm bg-white select-none">
+                    <img 
+                        src="/images/campus-hero-clean.jpg?v=2" 
+                        alt="Videotron Kampus UIN Siber Syekh Nurjati Cirebon" 
+                        class="w-full h-full object-cover object-center"
+                    />
+                </div>
+
+                <!-- 4. Tiga Manfaat Layanan (Proporsional dengan Animasi & Micro-Interaksi) -->
+                <div class="hidden sm:grid grid-cols-3 gap-2.5 pt-0.5 select-none">
+                    
+                    
+                    <div class="benefit-card group flex items-center gap-2.5 p-2 sm:p-2.5 rounded-xl bg-white border border-[#DCE7DF] shadow-xs cursor-default">
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E8F3EC] text-[#0F3D2E] group-hover:bg-[#0F3D2E] group-hover:text-white group-hover:scale-105 transition-all duration-300">
+                            <svg class="w-4 h-4 transition-transform duration-300 group-hover:rotate-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                        </span>
+                        <div class="min-w-0">
+                            <h3 class="text-xs font-bold text-[#0F3D2E] group-hover:text-[#0A2A20] transition-colors truncate">Pengajuan Online</h3>
+                            <p class="text-[10.5px] text-[#647B71] truncate">Mudah & cepat</p>
                         </div>
                     </div>
 
-                    <div>
-                        <h1 class="font-montserrat text-3xl lg:text-[42px] font-black tracking-tight text-[#0F3D2E] leading-none">
-                            E-VITRON
-                        </h1>
-                        <div class="mt-2 mb-2 w-12 h-1 rounded-full bg-[#D9A441]"></div>
-                        <h2 class="text-base lg:text-[18px] font-bold text-[#0F3D2E] tracking-tight">
-                            Layanan Pengajuan Penayangan Videotron
+                    
+                    <div class="benefit-card group flex items-center gap-2.5 p-2 sm:p-2.5 rounded-xl bg-white border border-[#DCE7DF] shadow-xs cursor-default">
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E8F3EC] text-[#0F3D2E] group-hover:bg-[#0F3D2E] group-hover:text-white group-hover:scale-105 transition-all duration-300">
+                            <svg class="w-4 h-4 transition-transform duration-300 group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <circle cx="12" cy="12" r="9"></circle>
+                                <polyline points="12 7 12 12 15 15"></polyline>
+                            </svg>
+                        </span>
+                        <div class="min-w-0">
+                            <h3 class="text-xs font-bold text-[#0F3D2E] group-hover:text-[#0A2A20] transition-colors truncate">Pantau Status</h3>
+                            <p class="text-[10.5px] text-[#647B71] truncate">Secara real-time</p>
+                        </div>
+                    </div>
+
+                    
+                    <div class="benefit-card group flex items-center gap-2.5 p-2 sm:p-2.5 rounded-xl bg-white border border-[#DCE7DF] shadow-xs cursor-default">
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E8F3EC] text-[#0F3D2E] group-hover:bg-[#0F3D2E] group-hover:text-white group-hover:scale-105 transition-all duration-300">
+                            <svg class="w-4 h-4 transition-transform duration-300 group-hover:-rotate-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/>
+                            </svg>
+                        </span>
+                        <div class="min-w-0">
+                            <h3 class="text-xs font-bold text-[#0F3D2E] group-hover:text-[#0A2A20] transition-colors truncate">Informasi Penayangan</h3>
+                            <p class="text-[10.5px] text-[#647B71] truncate">Terkini & akurat</p>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- =========================================================
+                 KOLOM KANAN: KARTU LOGIN
+                 ========================================================= -->
+            <div class="lg:col-span-5 flex justify-center lg:justify-end">
+                <div class="w-full max-w-[450px] bg-white rounded-[22px] sm:rounded-[24px] p-5 sm:p-7 lg:p-7.5 border border-[#DCE7DF] shadow-[0_12px_40px_rgba(15,61,46,0.06)]">
+                    
+                    <!-- Header Kartu: Logo E-VITRON & Judul (Tanpa Box) -->
+                    <div class="text-center mb-3.5 sm:mb-5">
+                        <img src="/images/sipetron-icon.png?v=3" 
+                             alt="Logo E-VITRON" 
+                             class="hidden sm:block h-10 sm:h-12 w-auto mx-auto mb-2.5 object-contain select-none" />
+                        <h2 class="text-lg lg:text-[21px] font-bold text-[#0F3D2E] leading-snug">
+                            Masuk ke E-VITRON
                         </h2>
-                        <p class="mt-1 text-[13px] text-[#647B71] font-medium leading-relaxed max-w-xl">
-                            Media terpadu untuk publikasi informasi, kurasi materi, dan penjadwalan 6 titik layar videotron kampus UIN Siber Syekh Nurjati Cirebon.
+                        <p class="text-xs text-[#647B71] font-medium mt-0.5">
+                            Gunakan akun kampus untuk melanjutkan.
                         </p>
                     </div>
 
-                    <div class="w-full aspect-[16/9] max-h-[235px] rounded-[16px] overflow-hidden border border-[#DCE7DF] shadow-sm bg-white">
-                        <img src="images/campus-hero-clean.jpg" alt="Videotron Kampus UINSSC" class="w-full h-full object-cover object-center" />
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-0.5">
-                        <div class="flex items-center gap-2.5 p-2.5 rounded-xl bg-white border border-[#DCE7DF] shadow-xs">
-                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E8F3EC] text-[#0F3D2E] font-bold text-xs">1</span>
-                            <div class="min-w-0">
-                                <h3 class="text-xs font-bold text-[#0F3D2E] truncate">Pengajuan 5 Langkah</h3>
-                                <p class="text-[10.5px] text-[#647B71] truncate">Terintegrasi Bridge SSO</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2.5 p-2.5 rounded-xl bg-white border border-[#DCE7DF] shadow-xs">
-                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E8F3EC] text-[#0F3D2E] font-bold text-xs">2</span>
-                            <div class="min-w-0">
-                                <h3 class="text-xs font-bold text-[#0F3D2E] truncate">Kurasi &amp; Revisi</h3>
-                                <p class="text-[10.5px] text-[#647B71] truncate">Notifikasi Portal &amp; Email</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2.5 p-2.5 rounded-xl bg-white border border-[#DCE7DF] shadow-xs">
-                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E8F3EC] text-[#0F3D2E] font-bold text-xs">3</span>
-                            <div class="min-w-0">
-                                <h3 class="text-xs font-bold text-[#0F3D2E] truncate">6 Titik Videotron</h3>
-                                <p class="text-[10.5px] text-[#647B71] truncate">Rekap PDF &amp; Excel Resmi</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Kolom Kanan: Kartu Login SSO / Register -->
-                <div class="lg:col-span-5 flex justify-center lg:justify-end">
-                    <div class="w-full max-w-[450px] bg-white rounded-[24px] p-6 sm:p-7 border border-[#DCE7DF] shadow-[0_12px_40px_rgba(15,61,46,0.06)]">
-                        <div class="text-center mb-4">
-                            <img src="images/sipetron-icon.png" alt="Logo E-VITRON" class="h-11 w-auto mx-auto mb-2 object-contain" />
-                            <h2 class="text-xl font-bold text-[#0F3D2E]" x-text="authMode === 'login' ? 'Masuk ke E-VITRON' : 'Daftar Akun Tendik / Mitra'"></h2>
-                            <p class="text-xs text-[#647B71] font-medium mt-0.5"
-                                x-text="authMode === 'login' ? 'Gunakan NIM / NIP (Bridge SSO Kampus) atau Email Terdaftar' : 'Pendaftaran mandiri untuk Tendik & Mitra Eksternal'"></p>
-                        </div>
-
-                        <!-- LOGIN FORM -->
-                        <template x-if="authMode === 'login'">
-                            <form @submit.prevent="submitLogin()" class="space-y-3.5">
-                                <div>
-                                    <label class="block text-xs font-bold text-[#0F3D2E] mb-1.5">Username (NIM / NIP / Email) <span class="text-rose-500">*</span></label>
-                                    <input type="text" x-model="loginForm.identifier" required
-                                        placeholder="Ketik NIM, NIP Dosen, atau admin@uin.ac.id"
-                                        class="w-full rounded-xl border border-[#DCE7DF] px-3.5 py-2.5 text-xs font-medium text-[#0F3D2E] focus:outline-none focus:border-[#0F3D2E]" />
+                    
+                    
+                    
+                    <!-- Formulir Login Tunggal -->
+                    <form action="/login" method="POST" class="space-y-3.5">
+                        <input type="hidden" name="_token" value="qyjg1qb1kMcuGbkkSv00bUYd2YarXJPoMMcE08pl" autocomplete="off">
+                        <!-- Field 1: Username -->
+                        <div>
+                            <label for="identifier" class="block text-xs font-bold text-[#0F3D2E] mb-1">
+                                Username
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#647B71]">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
                                 </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-[#0F3D2E] mb-1.5">Kata Sandi <span class="text-rose-500">*</span></label>
-                                    <input type="password" x-model="loginForm.password" required
-                                        placeholder="Masukkan kata sandi akun kampus / lokal"
-                                        class="w-full rounded-xl border border-[#DCE7DF] px-3.5 py-2.5 text-xs font-medium text-[#0F3D2E] focus:outline-none focus:border-[#0F3D2E]" />
+                                <input 
+                                    type="text" 
+                                    id="identifier" 
+                                    name="identifier" 
+                                    x-model="identifier"
+                                    required
+                                    autocomplete="username"
+                                    placeholder="Masukkan username"
+                                    class="w-full h-[48px] pl-11 pr-4 bg-[#FBFDFB] hover:bg-white focus:bg-white border  border-[#DCE7DF]  rounded-[12px] text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0F3D2E] focus:ring-2 focus:ring-[#0F3D2E]/10 transition-all text-xs sm:text-sm font-medium">
+                            </div>
+                        </div>
+
+                        <!-- Field 2: Password -->
+                        <div>
+                            <label for="password" class="block text-xs font-bold text-[#0F3D2E] mb-1">
+                                Password
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#647B71]">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                    </svg>
                                 </div>
-
-                                <template x-if="ssoLoading">
-                                    <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-[#0F3D2E] flex items-center gap-2.5">
-                                        <span class="w-4 h-4 rounded-full border-2 border-[#0F3D2E] border-t-transparent animate-spin shrink-0"></span>
-                                        <span x-text="ssoLoadingText"></span>
-                                    </div>
-                                </template>
-
-                                <button type="submit" :disabled="ssoLoading"
-                                    class="w-full py-2.5 px-4 rounded-xl bg-[#0F3D2E] hover:bg-[#14533D] text-white font-bold text-xs shadow-sm transition cursor-pointer">
-                                    Masuk Sekarang
+                                <input 
+                                    :type="showPassword ? 'text' : 'password'" 
+                                    id="password" 
+                                    name="password" 
+                                    x-model="password"
+                                    required
+                                    autocomplete="current-password"
+                                    placeholder="Masukkan password"
+                                    class="w-full h-[48px] pl-11 pr-11 bg-[#FBFDFB] hover:bg-white focus:bg-white border border-[#DCE7DF] rounded-[12px] text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0F3D2E] focus:ring-2 focus:ring-[#0F3D2E]/10 transition-all text-xs sm:text-sm font-medium">
+                                
+                                <!-- Tombol Tampil/Sembunyikan Password -->
+                                <button 
+                                    type="button" 
+                                    @click="showPassword = !showPassword"
+                                    class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#647B71] hover:text-[#0F3D2E] focus:outline-none transition-colors cursor-pointer"
+                                    :title="showPassword ? 'Sembunyikan password' : 'Tampilkan password'">
+                                    <svg x-show="!showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    <svg x-show="showPassword" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                                    </svg>
                                 </button>
-
-                                <!-- Quick Demo Accounts Box -->
-                                <div class="pt-3 border-t border-[#EAEFEA]">
-                                    <div class="text-[11px] font-bold text-[#647B71] mb-2 text-center">
-                                        Simulasi Cepat Login SSO / Peran (1-Klik):
-                                    </div>
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <button type="button" @click="quickLogin('mahasiswa')"
-                                            class="p-2 rounded-xl border border-[#DCE7DF] hover:border-[#0F3D2E] bg-[#F8FAF8] text-left transition cursor-pointer">
-                                            <div class="text-[11px] font-bold text-[#0F3D2E]">Ahmad Fadhil (SSO)</div>
-                                            <div class="text-[10px] text-[#647B71]">NIM: 2208101001 · Mahasiswa</div>
-                                        </button>
-                                        <button type="button" @click="quickLogin('dosen')"
-                                            class="p-2 rounded-xl border border-[#DCE7DF] hover:border-[#0F3D2E] bg-[#F8FAF8] text-left transition cursor-pointer">
-                                            <div class="text-[11px] font-bold text-[#0F3D2E]">Dr. H. Syarifudin (SSO)</div>
-                                            <div class="text-[10px] text-[#647B71]">NIP: 198501012015011002</div>
-                                        </button>
-                                        <button type="button" @click="quickLogin('mitra')"
-                                            class="p-2 rounded-xl border border-[#DCE7DF] hover:border-[#0F3D2E] bg-[#F8FAF8] text-left transition cursor-pointer">
-                                            <div class="text-[11px] font-bold text-[#0F3D2E]">Mitra / Tendik</div>
-                                            <div class="text-[10px] text-[#647B71]">mitra@kreatif.co.id</div>
-                                        </button>
-                                        <button type="button" @click="quickLogin('admin')"
-                                            class="p-2 rounded-xl border border-[#D9A441] bg-[#FFFDF7] hover:bg-amber-50/70 text-left transition cursor-pointer">
-                                            <div class="text-[11px] font-bold text-[#0F3D2E]">Admin PUSTIKOM</div>
-                                            <div class="text-[10px] text-amber-800">admin@uin.ac.id · Panel Kurasi</div>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div class="text-center pt-1">
-                                    <button type="button" @click="authMode = 'register'" class="text-xs font-bold text-[#0F3D2E] hover:underline cursor-pointer">
-                                        Tendik atau Mitra Eksternal? Daftar Akun Baru &rarr;
-                                    </button>
-                                </div>
-                            </form>
-                        </template>
-
-                        <!-- REGISTER FORM (TENDIK / MITRA) -->
-                        <template x-if="authMode === 'register'">
-                            <form @submit.prevent="submitRegister()" class="space-y-3">
-                                <div>
-                                    <label class="block text-xs font-bold text-[#0F3D2E] mb-1">Nama Lengkap / PIC <span class="text-rose-500">*</span></label>
-                                    <input type="text" x-model="registerForm.name" required placeholder="Contoh: Budi Santoso"
-                                        class="w-full rounded-xl border border-[#DCE7DF] px-3 py-2 text-xs" />
-                                </div>
-                                <div class="grid grid-cols-2 gap-2.5">
-                                    <div>
-                                        <label class="block text-xs font-bold text-[#0F3D2E] mb-1">Kategori</label>
-                                        <select x-model="registerForm.role" class="w-full rounded-xl border border-[#DCE7DF] px-3 py-2 text-xs">
-                                            <option value="tendik">Tendik Kampus</option>
-                                            <option value="mitra">Mitra Eksternal</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-bold text-[#0F3D2E] mb-1">No. WhatsApp <span class="text-rose-500">*</span></label>
-                                        <input type="text" x-model="registerForm.phone" required placeholder="08123456789"
-                                            class="w-full rounded-xl border border-[#DCE7DF] px-3 py-2 text-xs" />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-[#0F3D2E] mb-1">Unit Kerja / Nama Instansi <span class="text-rose-500">*</span></label>
-                                    <input type="text" x-model="registerForm.unit" required placeholder="Contoh: Bagian Akademik / PT Mitra Kampus"
-                                        class="w-full rounded-xl border border-[#DCE7DF] px-3 py-2 text-xs" />
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-[#0F3D2E] mb-1">Email Aktif <span class="text-rose-500">*</span></label>
-                                    <input type="email" x-model="registerForm.email" required placeholder="nama@instansi.com"
-                                        class="w-full rounded-xl border border-[#DCE7DF] px-3 py-2 text-xs" />
-                                </div>
-                                <button type="submit"
-                                    class="w-full py-2.5 px-4 rounded-xl bg-[#0F3D2E] hover:bg-[#14533D] text-white font-bold text-xs cursor-pointer">
-                                    Kirim Pendaftaran (Menunggu Approval Admin)
-                                </button>
-                                <div class="text-center pt-1">
-                                    <button type="button" @click="authMode = 'login'" class="text-xs font-bold text-[#647B71] hover:text-[#0F3D2E] cursor-pointer">
-                                        &larr; Kembali ke Halaman Login
-                                    </button>
-                                </div>
-                            </form>
-                        </template>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </template>
-
-    <!-- =========================================================
-         VIEW 2: AUTHENTICATED PORTAL & ADMIN PANEL
-    ========================================================== -->
-    <template x-if="currentUser">
-        <div class="flex-1 flex flex-col">
-            <!-- NAVBAR PORTAL E-VITRON -->
-            <header class="bg-white border-b border-[#DCE7DF] sticky top-[37px] z-40 shadow-xs">
-                <div class="max-w-[1400px] mx-auto px-4 sm:px-8 h-16 flex items-center justify-between gap-4">
-                    <div class="flex items-center gap-3">
-                        <img src="images/sipetron-icon.png" alt="E-VITRON" class="h-9 w-auto object-contain" />
-                        <div class="leading-tight">
-                            <div class="font-montserrat font-black text-base text-[#0F3D2E] tracking-tight flex items-center gap-2">
-                                <span>E-VITRON</span>
-                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E8F3EC] text-[#0F3D2E]"
-                                    x-text="currentUser.auth_type === 'campus_sso' ? 'Bridge SSO UINSSC' : 'Akun Lokal'"></span>
                             </div>
-                            <div class="text-[11px] text-[#647B71] font-medium">UIN Siber Syekh Nurjati Cirebon</div>
                         </div>
-                    </div>
 
-                    <!-- Navigation Tabs -->
-                    <nav class="flex items-center gap-1 sm:gap-2 overflow-x-auto">
-                        <button type="button" @click="activePage = 'home'"
-                            :class="activePage === 'home' ? 'bg-[#0F3D2E] text-white' : 'text-[#1A332C] hover:bg-[#E8F3EC]'"
-                            class="px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap">
-                            Beranda &amp; Layar
-                        </button>
-                        <button type="button" @click="activePage = 'wizard'"
-                            :class="activePage === 'wizard' ? 'bg-[#0F3D2E] text-white' : 'text-[#1A332C] hover:bg-[#E8F3EC]'"
-                            class="px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap">
-                            + Ajukan Tayang (5-Step)
-                        </button>
-                        <button type="button" @click="activePage = 'submissions'"
-                            :class="activePage === 'submissions' ? 'bg-[#0F3D2E] text-white' : 'text-[#1A332C] hover:bg-[#E8F3EC]'"
-                            class="px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap flex items-center gap-1.5">
-                            <span>Pengajuan Saya</span>
-                            <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-[#D9A441] text-[#0F3D2E] font-extrabold" x-text="submissions.length"></span>
-                        </button>
-                        <button type="button" @click="activePage = 'admin'"
-                            :class="activePage === 'admin' ? 'bg-[#D9A441] text-[#0F3D2E]' : 'text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300'"
-                            class="px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap flex items-center gap-1.5">
-                            <span>Panel Admin Filament</span>
-                            <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-[#0F3D2E] text-white"
-                                x-text="submissions.filter(s => s.status === 'menunggu').length"></span>
-                        </button>
-                    </nav>
-
-                    <!-- User Profile Badge -->
-                    <div class="hidden lg:flex items-center gap-3">
-                        <div class="text-right leading-tight">
-                            <div class="text-xs font-bold text-[#0F3D2E]" x-text="currentUser.name"></div>
-                            <div class="text-[10.5px] text-[#647B71]" x-text="(currentUser.identifier || currentUser.email) + ' · ' + currentUser.unit_or_prodi"></div>
-                        </div>
-                        <div class="h-9 w-9 rounded-full bg-[#0F3D2E] text-[#F3C45A] font-bold text-xs flex items-center justify-center uppercase"
-                            x-text="currentUser.name.substring(0, 2)"></div>
-                    </div>
-                </div>
-            </header>
-
-            <!-- =====================================================
-                 PAGE A: BERANDA & KATALOG 6 TITIK VIDEOTRON
-            ====================================================== -->
-            <template x-if="activePage === 'home'">
-                <div class="flex-1">
-                    <!-- Hero Section Identical to home.blade.php -->
-                    <section class="relative bg-[#EEF4F1] h-[250px] sm:h-[280px] overflow-hidden flex flex-col justify-center border-b border-[#DCE7DF]">
-                        <img src="images/campus-videotron.png" alt="Videotron UINSSC"
-                            class="absolute inset-y-0 right-0 h-full w-full md:w-[62%] object-cover object-center pointer-events-none"
-                            style="mask-image:linear-gradient(90deg,transparent 0%,black 28%);-webkit-mask-image:linear-gradient(90deg,transparent 0%,black 28%);" />
-                        <div class="hidden md:block absolute inset-0 pointer-events-none"
-                            style="background:linear-gradient(90deg,#EEF4F1 0%,#EEF4F1 32%,rgba(238,244,241,0.88) 44%,rgba(238,244,241,0.28) 60%,transparent 74%);"></div>
-                        <div class="absolute inset-0 md:hidden bg-gradient-to-r from-[#EEF4F1]/95 via-[#EEF4F1]/90 to-[#EEF4F1]/65 pointer-events-none"></div>
-
-                        <div class="relative mx-auto w-full max-w-[1400px] px-5 sm:px-10 z-10">
-                            <div class="max-w-[520px]">
-                                <span class="inline-flex items-center rounded-full px-3 py-0.5 text-[10px] font-bold text-white"
-                                    style="background:linear-gradient(90deg,#C9901A 0%,#DDB140 60%,#EDD088 100%);">
-                                    Layanan Videotron Kampus UINSSC
+                        <!-- Keterangan Autentikasi Kampus Terintegrasi -->
+                        <div class="flex items-center justify-between gap-1.5 text-xs text-[#647B71] px-1 py-0.5">
+                            <span class="inline-flex items-center gap-2 font-medium min-w-0">
+                                <span class="relative flex h-2 w-2 shrink-0">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
                                 </span>
-                                <h1 class="mt-2 font-extrabold leading-[1.15] tracking-tight text-[#0E4D3C] text-2xl sm:text-3xl md:text-[34px]">
-                                    Pengajuan Penayangan<br class="hidden sm:inline"> Videotron Kampus
-                                </h1>
-                                <p class="mt-1.5 text-xs sm:text-[13px] leading-relaxed text-[#3B544D] max-w-[440px]">
-                                    Tayangkan publikasi kegiatan akademik, kemahasiswaan, dan pengumuman resmi di 6 titik layar videotron UIN Siber Syekh Nurjati Cirebon secara terpusat.
-                                </p>
-                                <div class="mt-4 flex items-center gap-3">
-                                    <button type="button" @click="activePage = 'wizard'"
-                                        class="btn-hero-primary inline-flex h-10 items-center justify-center gap-2 rounded-full px-5 text-xs sm:text-sm font-bold text-[#123F33] shadow-sm cursor-pointer">
-                                        <span>Ajukan Sekarang</span>
-                                        <span>&rarr;</span>
-                                    </button>
-                                    <button type="button" @click="activePage = 'submissions'"
-                                        class="inline-flex h-10 items-center justify-center gap-1.5 rounded-full px-4 text-xs sm:text-sm font-bold bg-white/90 text-[#0F3D2E] border border-[#0F3D2E]/20 hover:bg-white cursor-pointer">
-                                        Pantau Tiket (<span x-text="submissions.length"></span>)
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Daftar 6 Titik Perangkat Videotron -->
-                    <section class="max-w-[1400px] mx-auto px-4 sm:px-8 py-8">
-                        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
-                            <div>
-                                <div class="text-xs font-bold uppercase tracking-wider text-[#C9901A]">Infrastruktur Layar Digital</div>
-                                <h2 class="text-xl sm:text-2xl font-extrabold text-[#0F3D2E]">Daftar 6 Titik Videotron Kampus</h2>
-                                <p class="text-xs text-[#647B71] mt-0.5">Mendukung rotasi playlist bersamaan dengan sinkronisasi status operasional perangkat secara otomatis.</p>
-                            </div>
-                            <div class="flex items-center gap-2 text-xs">
-                                <span class="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold">
-                                    Aktif Normal: <span x-text="videotrons.filter(v => v.condition === 'normal').length"></span> Layar
-                                </span>
-                                <span class="px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 font-bold">
-                                    Gangguan / Perbaikan: <span x-text="videotrons.filter(v => v.condition !== 'normal').length"></span> Layar
-                                </span>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                            <template x-for="v in videotrons" :key="v.id">
-                                <div class="bg-white rounded-2xl border border-[#DCE7DF] overflow-hidden shadow-xs hover:shadow-md transition flex flex-col justify-between">
-                                    <div>
-                                        <div class="relative h-40 bg-[#0F3D2E] overflow-hidden">
-                                            <img src="images/campus-hero-clean.jpg" :alt="v.name" class="w-full h-full object-cover opacity-85" />
-                                            <div class="absolute top-3 left-3">
-                                                <span class="px-2.5 py-1 rounded-full text-[10.5px] font-bold shadow-xs"
-                                                    :class="v.condition === 'normal' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'"
-                                                    x-text="v.condition === 'normal' ? '● Beroperasi Normal' : '▲ Gangguan / Perbaikan'"></span>
-                                            </div>
-                                            <div class="absolute bottom-2.5 right-3 bg-black/65 text-white text-[10.5px] font-mono px-2.5 py-0.5 rounded-lg"
-                                                x-text="v.resolution + ' · ' + v.orientation"></div>
-                                        </div>
-                                        <div class="p-4">
-                                            <h3 class="font-bold text-base text-[#0F3D2E]" x-text="v.name"></h3>
-                                            <p class="text-xs text-[#647B71] mt-0.5" x-text="v.location"></p>
-                                            <div class="mt-3 pt-3 border-t border-[#EAEFEA] flex items-center justify-between text-[11px] text-[#405B50]">
-                                                <span>Jam Operasional:</span>
-                                                <span class="font-bold text-[#0F3D2E]" x-text="v.operating_hours"></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="px-4 pb-4">
-                                        <button type="button"
-                                            :disabled="v.condition !== 'normal'"
-                                            @click="selectVideotronForWizard(v.id)"
-                                            :class="v.condition === 'normal' ? 'bg-[#0F3D2E] hover:bg-[#14533D] text-white cursor-pointer' : 'bg-gray-200 text-gray-500 cursor-not-allowed'"
-                                            class="w-full py-2 rounded-xl text-xs font-bold transition">
-                                            <span x-text="v.condition === 'normal' ? 'Pilih Layar & Ajukan Penayangan' : 'Layar Sedang Pemeliharaan'"></span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
-                    </section>
-                </div>
-            </template>
-
-            <!-- =====================================================
-                 PAGE B: 5-STEP SUBMISSION WIZARD
-            ====================================================== -->
-            <template x-if="activePage === 'wizard'">
-                <section class="max-w-[920px] mx-auto w-full px-4 sm:px-8 py-8 flex-1">
-                    <div class="bg-white rounded-3xl border border-[#DCE7DF] p-6 sm:p-8 shadow-sm">
-                        <div class="flex flex-wrap items-center justify-between gap-2 pb-5 border-b border-[#EAEFEA]">
-                            <div>
-                                <span class="text-[11px] font-bold uppercase tracking-wider text-[#C9901A]">Formulir Terpandu 5 Langkah</span>
-                                <h2 class="text-xl font-extrabold text-[#0F3D2E]">Ajukan Penayangan Materi Videotron</h2>
-                            </div>
-                            <span class="px-3 py-1 rounded-full text-xs font-bold bg-[#E8F3EC] text-[#0F3D2E]">
-                                Langkah <span x-text="wizardStep"></span> dari 5
+                                <span class="text-[#0F3D2E] font-semibold text-[11px] sm:text-[11.5px] leading-tight">Masuk dengan Akun Portal Akademik (NIM / NIP)</span>
                             </span>
+                            <span class="text-[10px] font-bold text-[#D9A441] bg-[#D9A441]/10 px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0">SSO</span>
                         </div>
 
-                        <!-- Step Indicator Bar -->
-                        <div class="grid grid-cols-5 gap-2 my-5">
-                            <template x-for="(label, idx) in ['1. Titik Layar', '2. Jadwal Tayang', '3. Rincian & Drive', '4. Surat PDF', '5. Konfirmasi']" :key="idx">
-                                <button type="button" @click="wizardStep = idx + 1"
-                                    :class="wizardStep === idx + 1 ? 'bg-[#0F3D2E] text-white' : (wizardStep > idx + 1 ? 'bg-emerald-100 text-[#0F3D2E]' : 'bg-gray-100 text-gray-500')"
-                                    class="py-2 px-2 rounded-xl text-[11px] font-bold text-center truncate transition cursor-pointer"
-                                    x-text="label"></button>
-                            </template>
-                        </div>
-
-                        <!-- STEP 1: Pilih Titik Videotron -->
-                        <template x-if="wizardStep === 1">
-                            <div class="space-y-4">
-                                <p class="text-xs text-[#647B71]">Pilih satu atau beberapa layar videotron aktif untuk penayangan materi Anda:</p>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <template x-for="v in videotrons" :key="v.id">
-                                        <label class="flex items-start gap-3 p-3.5 rounded-2xl border transition"
-                                            :class="wizardForm.videotronIds.includes(v.id) ? 'border-[#0F3D2E] bg-[#E8F3EC]/50' : (v.condition !== 'normal' ? 'border-gray-200 bg-gray-50 opacity-60' : 'border-[#DCE7DF] bg-white hover:border-[#0F3D2E]/50 cursor-pointer')">
-                                            <input type="checkbox" :value="v.id" x-model="wizardForm.videotronIds" :disabled="v.condition !== 'normal'" class="mt-1" />
-                                            <div class="text-xs">
-                                                <div class="font-bold text-[#0F3D2E]" x-text="v.name"></div>
-                                                <div class="text-[#647B71]" x-text="v.location + ' (' + v.resolution + ')'"></div>
-                                            </div>
-                                        </label>
-                                    </template>
-                                </div>
-                            </div>
-                        </template>
-
-                        <!-- STEP 2: Jadwal Tayang -->
-                        <template x-if="wizardStep === 2">
-                            <div class="space-y-4">
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-xs font-bold text-[#0F3D2E] mb-1">Tanggal Mulai Tayang <span class="text-rose-500">*</span></label>
-                                        <input type="date" x-model="wizardForm.start_date" class="w-full rounded-xl border border-[#DCE7DF] px-3.5 py-2.5 text-xs" />
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-bold text-[#0F3D2E] mb-1">Tanggal Selesai Tayang <span class="text-rose-500">*</span></label>
-                                        <input type="date" x-model="wizardForm.end_date" class="w-full rounded-xl border border-[#DCE7DF] px-3.5 py-2.5 text-xs" />
-                                    </div>
-                                </div>
-                                <div class="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-[#0F3D2E]">
-                                    <strong>Rotasi Playlist Otomatis:</strong> Sistem mendukung penayangan bergilir bersama materi kegiatan lain pada layar yang aktif normal.
-                                </div>
-                            </div>
-                        </template>
-
-                        <!-- STEP 3: Materi & Google Drive -->
-                        <template x-if="wizardStep === 3">
-                            <div class="space-y-3.5">
-                                <div>
-                                    <label class="block text-xs font-bold text-[#0F3D2E] mb-1">Judul Kegiatan / Publikasi <span class="text-rose-500">*</span></label>
-                                    <input type="text" x-model="wizardForm.title" placeholder="Contoh: Seminar Nasional Teknologi Siber UINSSC 2026"
-                                        class="w-full rounded-xl border border-[#DCE7DF] px-3.5 py-2.5 text-xs" />
-                                </div>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                                    <div>
-                                        <label class="block text-xs font-bold text-[#0F3D2E] mb-1">Format Materi</label>
-                                        <select x-model="wizardForm.content_type" class="w-full rounded-xl border border-[#DCE7DF] px-3.5 py-2.5 text-xs">
-                                            <option value="poster">Poster / Infografis (1920x1080)</option>
-                                            <option value="video">Video MP4 (Maks. 30 Detik)</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-bold text-[#0F3D2E] mb-1">Unit / Organisasi Pengaju</label>
-                                        <input type="text" x-model="wizardForm.organization" class="w-full rounded-xl border border-[#DCE7DF] px-3.5 py-2.5 text-xs" />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-[#0F3D2E] mb-1">Tautan Google Drive Materi (`drive.google.com`) <span class="text-rose-500">*</span></label>
-                                    <input type="url" x-model="wizardForm.gdrive_link" placeholder="https://drive.google.com/drive/folders/..."
-                                        class="w-full rounded-xl border border-[#DCE7DF] px-3.5 py-2.5 text-xs" />
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-[#0F3D2E] mb-1">Deskripsi Singkat Kegiatan</label>
-                                    <textarea rows="2" x-model="wizardForm.description" class="w-full rounded-xl border border-[#DCE7DF] px-3.5 py-2 text-xs"></textarea>
-                                </div>
-                            </div>
-                        </template>
-
-                        <!-- STEP 4: Surat Permohonan PDF -->
-                        <template x-if="wizardStep === 4">
-                            <div class="space-y-4">
-                                <div class="p-4 rounded-2xl border-2 border-dashed border-[#0F3D2E]/30 bg-[#F8FAF8] text-center">
-                                    <div class="text-xs font-bold text-[#0F3D2E]">Berkas Surat Permohonan Resmi (PDF · Maks. 2 MB)</div>
-                                    <p class="text-[11px] text-[#647B71] mt-1">Pada aplikasi produksi, berkas disimpan terenkripsi di private storage (`storage/app/private/surat_peminjaman`) dan dilindungi `SubmissionPolicy` (Zero IDOR).</p>
-                                    <input type="text" x-model="wizardForm.surat_name" class="mt-3 w-full max-w-md mx-auto rounded-xl border border-[#DCE7DF] px-3 py-2 text-xs bg-white text-center font-mono" />
-                                </div>
-                            </div>
-                        </template>
-
-                        <!-- STEP 5: Review & Submit -->
-                        <template x-if="wizardStep === 5">
-                            <div class="space-y-3 text-xs">
-                                <div class="p-4 rounded-2xl bg-[#F8FAF8] border border-[#DCE7DF] space-y-2">
-                                    <div class="flex justify-between"><span class="text-[#647B71]">Pemohon:</span><span class="font-bold text-[#0F3D2E]" x-text="currentUser.name + ' (' + (currentUser.identifier || currentUser.email) + ')'"></span></div>
-                                    <div class="flex justify-between"><span class="text-[#647B71]">Judul Kegiatan:</span><span class="font-bold text-[#0F3D2E]" x-text="wizardForm.title"></span></div>
-                                    <div class="flex justify-between"><span class="text-[#647B71]">Format &amp; Periode:</span><span class="font-bold text-[#0F3D2E]" x-text="wizardForm.content_type.toUpperCase() + ' · ' + wizardForm.start_date + ' s.d. ' + wizardForm.end_date"></span></div>
-                                    <div class="flex justify-between"><span class="text-[#647B71]">Berkas Surat Privat:</span><span class="font-mono text-[#0F3D2E]" x-text="wizardForm.surat_name"></span></div>
-                                </div>
-                            </div>
-                        </template>
-
-                        <!-- Wizard Footer Buttons -->
-                        <div class="mt-6 pt-4 border-t border-[#EAEFEA] flex items-center justify-between">
-                            <button type="button" @click="wizardStep > 1 ? wizardStep-- : activePage = 'home'"
-                                class="px-4 py-2 rounded-xl border border-[#DCE7DF] text-xs font-bold text-[#1A332C] hover:bg-gray-50 cursor-pointer">
-                                &larr; Sebelumnya
-                            </button>
-                            <template x-if="wizardStep < 5">
-                                <button type="button" @click="wizardStep++"
-                                    class="px-5 py-2 rounded-xl bg-[#0F3D2E] hover:bg-[#14533D] text-white text-xs font-bold cursor-pointer">
-                                    Lanjut Langkah <span x-text="wizardStep + 1"></span> &rarr;
-                                </button>
-                            </template>
-                            <template x-if="wizardStep === 5">
-                                <button type="button" @click="submitWizard()"
-                                    class="px-6 py-2.5 rounded-xl bg-[#D9A441] hover:bg-[#C68D24] text-[#0F3D2E] text-xs font-extrabold shadow-sm cursor-pointer">
-                                    ✓ Kirim Pengajuan Sekarang
-                                </button>
-                            </template>
-                        </div>
-                    </div>
-                </section>
-            </template>
-
-            <!-- =====================================================
-                 PAGE C: PENGAJUAN SAYA (PEMOHON)
-            ====================================================== -->
-            <template x-if="activePage === 'submissions'">
-                <section class="max-w-[1400px] mx-auto w-full px-4 sm:px-8 py-8 flex-1">
-                    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-                        <div>
-                            <h2 class="text-xl font-extrabold text-[#0F3D2E]">Daftar &amp; Status Pengajuan Videotron</h2>
-                            <p class="text-xs text-[#647B71]">Status tampilan (`terjadwal`, `tayang`, `selesai`) dihitung dinamis dari tiket yang disetujui.</p>
-                        </div>
-                        <button type="button" @click="activePage = 'wizard'; wizardStep = 1"
-                            class="px-4 py-2 rounded-xl bg-[#0F3D2E] text-white text-xs font-bold cursor-pointer">
-                            + Buat Pengajuan Baru
+                        <!-- Tombol Utama: Masuk ke E-VITRON -->
+                        <button type="submit"
+                            class="w-full h-[48px] rounded-[12px] bg-[#0F3D2E] hover:bg-[#0A2A20] active:scale-[0.99] text-white font-bold text-sm flex items-center justify-center gap-2 transition-all duration-150 shadow-[0_4px_14px_rgba(15,61,46,0.2)] select-none mt-1 cursor-pointer">
+                            <span>Masuk ke E-VITRON</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                            </svg>
                         </button>
+                    </form>
+
+                    <!-- Navigasi Registrasi Tendik & Mitra Eksternal (Clean & Lega Tanpa Divider Menumpuk) -->
+                    <div class="mt-4 text-center">
+                        <p class="text-xs text-[#647B71] leading-relaxed">
+                            Belum punya akun portal? 
+                            <a href="/register" class="inline-block whitespace-nowrap font-bold text-[#0F3D2E] hover:text-[#D9A441] underline underline-offset-3 decoration-[#0F3D2E]/30 hover:decoration-[#D9A441] transition-all ml-1">
+                                Daftar Akun Mitra &amp; Tendik&nbsp;&rarr;
+                            </a>
+                        </p>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <template x-for="item in submissions" :key="item.ticket_code">
-                            <div class="bg-white rounded-2xl border border-[#DCE7DF] p-5 shadow-xs flex flex-col justify-between">
-                                <div>
-                                    <div class="flex items-center justify-between gap-2 mb-2">
-                                        <span class="font-mono text-xs font-bold text-[#0F3D2E]" x-text="item.ticket_code"></span>
-                                        <span class="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold uppercase"
-                                            :class="{
-                                                'bg-amber-100 text-amber-800': item.status === 'menunggu',
-                                                'bg-emerald-100 text-emerald-800': item.status === 'disetujui',
-                                                'bg-orange-100 text-orange-800': item.status === 'revisi',
-                                                'bg-rose-100 text-rose-800': item.status === 'ditolak'
-                                            }"
-                                            x-text="item.status"></span>
-                                    </div>
-                                    <h3 class="font-bold text-sm text-[#0F3D2E]" x-text="item.title"></h3>
-                                    <p class="text-xs text-[#647B71] mt-1" x-text="item.organization + ' · PIC: ' + item.pic_name"></p>
-                                    <div class="mt-3 text-[11px] text-[#405B50] space-y-1">
-                                        <div><strong>Periode:</strong> <span x-text="item.start_date + ' s.d. ' + item.end_date"></span></div>
-                                        <div><strong>Layar:</strong> <span x-text="item.videotrons.join(', ')"></span></div>
-                                    </div>
-                                    <template x-if="item.admin_notes">
-                                        <div class="mt-3 p-2.5 rounded-xl bg-[#FAFBF9] border-l-4 border-[#D9A441] text-[11px] text-[#1A332C]">
-                                            <div class="font-bold text-[#0F3D2E]">Catatan Verifikator:</div>
-                                            <div class="italic mt-0.5" x-text="item.admin_notes"></div>
-                                        </div>
-                                    </template>
-                                </div>
-                                <div class="mt-4 pt-3 border-t border-[#EAEFEA] flex items-center justify-between gap-2">
-                                    <button type="button" @click="activePage = 'admin'"
-                                        class="text-[11px] font-bold text-[#0F3D2E] hover:underline cursor-pointer">
-                                        Uji Kurasi di Panel Admin &rarr;
-                                    </button>
-                                    <template x-if="item.status === 'revisi'">
-                                        <button type="button" @click="sendRevisionReply(item)"
-                                            class="px-3 py-1.5 rounded-lg bg-amber-500 text-white text-[11px] font-bold cursor-pointer">
-                                            Kirim Perbaikan Revisi
-                                        </button>
-                                    </template>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-                </section>
-            </template>
-
-            <!-- =====================================================
-                 PAGE D: PANEL ADMIN FILAMENT v3 (INTERACTIVE CURATION)
-            ====================================================== -->
-            <template x-if="activePage === 'admin'">
-                <section class="max-w-[1400px] mx-auto w-full px-4 sm:px-8 py-8 flex-1">
-                    <div class="bg-[#0F3D2E] text-white rounded-3xl p-6 mb-6 flex flex-wrap items-center justify-between gap-4">
-                        <div>
-                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#D9A441] text-[#0F3D2E]">PANEL ADMIN FILAMENT v3</span>
-                            <h2 class="text-xl font-extrabold mt-1">Meja Kurasi Pengajuan &amp; Operasional Videotron</h2>
-                            <p class="text-xs text-emerald-100/80 mt-0.5">Klik Setujui, Minta Revisi, atau Tolak untuk mencoba alur keputusan &amp; pemicu notifikasi email SMTP.</p>
-                        </div>
-                        <div class="grid grid-cols-3 gap-3 text-center">
-                            <div class="bg-white/10 px-4 py-2 rounded-2xl">
-                                <div class="text-lg font-extrabold text-[#F3C45A]" x-text="submissions.filter(s => s.status === 'menunggu').length"></div>
-                                <div class="text-[10px] text-emerald-100">Menunggu Kurasi</div>
-                            </div>
-                            <div class="bg-white/10 px-4 py-2 rounded-2xl">
-                                <div class="text-lg font-extrabold text-emerald-300" x-text="submissions.filter(s => s.status === 'disetujui').length"></div>
-                                <div class="text-[10px] text-emerald-100">Disetujui Tayang</div>
-                            </div>
-                            <div class="bg-white/10 px-4 py-2 rounded-2xl">
-                                <div class="text-lg font-extrabold text-amber-300" x-text="submissions.filter(s => s.status === 'revisi').length"></div>
-                                <div class="text-[10px] text-emerald-100">Perlu Revisi</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-white rounded-2xl border border-[#DCE7DF] overflow-hidden shadow-xs">
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse text-xs">
-                                <thead>
-                                    <tr class="bg-[#F8FAF8] border-b border-[#DCE7DF] text-[#0F3D2E] font-bold">
-                                        <th class="py-3.5 px-4">Tiket</th>
-                                        <th class="py-3.5 px-4">Judul &amp; Pengaju</th>
-                                        <th class="py-3.5 px-4">Titik Layar</th>
-                                        <th class="py-3.5 px-4">Periode</th>
-                                        <th class="py-3.5 px-4">Status</th>
-                                        <th class="py-3.5 px-4 text-right">Aksi Kurasi Admin</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-[#EAEFEA]">
-                                    <template x-for="item in submissions" :key="item.ticket_code">
-                                        <tr class="hover:bg-[#F8FAF8]/80">
-                                            <td class="py-3.5 px-4 font-mono font-bold text-[#0F3D2E]" x-text="item.ticket_code"></td>
-                                            <td class="py-3.5 px-4">
-                                                <div class="font-bold text-[#0F3D2E]" x-text="item.title"></div>
-                                                <div class="text-[11px] text-[#647B71]" x-text="item.pic_name + ' · ' + item.organization"></div>
-                                            </td>
-                                            <td class="py-3.5 px-4 text-[#405B50]" x-text="item.videotrons.join(', ')"></td>
-                                            <td class="py-3.5 px-4 text-[#405B50]" x-text="item.start_date + ' s.d. ' + item.end_date"></td>
-                                            <td class="py-3.5 px-4">
-                                                <span class="px-2.5 py-1 rounded-full text-[10.5px] font-bold uppercase"
-                                                    :class="{
-                                                        'bg-amber-100 text-amber-800': item.status === 'menunggu',
-                                                        'bg-emerald-100 text-emerald-800': item.status === 'disetujui',
-                                                        'bg-orange-100 text-orange-800': item.status === 'revisi',
-                                                        'bg-rose-100 text-rose-800': item.status === 'ditolak'
-                                                    }"
-                                                    x-text="item.status"></span>
-                                            </td>
-                                            <td class="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
-                                                <button type="button" @click="adminDecision(item, 'disetujui')"
-                                                    class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] cursor-pointer">
-                                                    Setujui
-                                                </button>
-                                                <button type="button" @click="adminDecision(item, 'revisi')"
-                                                    class="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] cursor-pointer">
-                                                    Minta Revisi
-                                                </button>
-                                                <button type="button" @click="adminDecision(item, 'ditolak')"
-                                                    class="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] cursor-pointer">
-                                                    Tolak
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    </template>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </section>
-            </template>
-        </div>
-    </template>
-
-    <!-- FOOTER -->
-    <footer class="bg-white border-t border-[#DCE7DF] py-4 px-4 sm:px-8 text-center text-xs text-[#647B71]">
-        <div class="max-w-[1400px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-            <div>
-                <strong class="text-[#0F3D2E]">E-VITRON</strong> · UIN Siber Syekh Nurjati Cirebon &amp; PUSTIKOM UINSSC
+                </div>
             </div>
-            <div>
-                Interactive Preview Demo · <a href="https://github.com/derma0512-spec/e-vitron-uinss" target="_blank" rel="noopener" class="font-bold text-[#0F3D2E] hover:underline">Lihat Source Code Laravel 13 Lengkap di GitHub &rarr;</a>
+
+        </div>
+
+    </main>
+
+
+    
+    <!-- FOOTER HALAMAN (100% Identik dengan Login) -->
+    <footer class="relative z-10 w-full py-3 px-6 select-none">
+        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-1.5 text-xs text-[#647B71]">
+            <p class="font-medium text-[11.5px] text-center sm:text-left">
+                E-VITRON &bull; UIN Siber Syekh Nurjati Cirebon
+            </p>
+            
+            <div class="flex items-center gap-1.5 text-[11.5px]">
+                <span class="text-[#647B71] font-medium">Butuh bantuan?</span>
+                <button 
+                    type="button" 
+                    @click="showHelpModal = true"
+                    class="font-bold text-[#0F3D2E] hover:text-[#D9A441] transition-colors cursor-pointer underline underline-offset-3 decoration-[#0F3D2E]/40 hover:decoration-[#D9A441]">
+                    Bantuan Layanan
+                </button>
             </div>
         </div>
     </footer>
 
-    <script>
-        function evitronDemoApp() {
-            return {
-                authMode: 'login',
-                activePage: 'home',
-                ssoLoading: false,
-                ssoLoadingText: '',
-                currentUser: null,
-                wizardStep: 1,
-                toast: { visible: false, title: '', message: '' },
-                loginForm: { identifier: '2208101001', password: 'password' },
-                registerForm: { name: '', role: 'mitra', phone: '', unit: '', email: '' },
-                wizardForm: {
-                    videotronIds: [1, 5],
-                    start_date: '2026-11-22',
-                    end_date: '2026-11-25',
-                    title: 'Pameran Inovasi Digital AICIS UIN Siber Syekh Nurjati Cirebon',
-                    content_type: 'video',
-                    organization: 'Fakultas Sains dan Teknologi Siber',
-                    gdrive_link: 'https://drive.google.com/drive/folders/aicis-uinssc-2026',
-                    description: 'Publikasi agenda pameran karya inovasi mahasiswa UIN Siber Syekh Nurjati Cirebon.',
-                    surat_name: 'Surat-Permohonan-Videotron-AICIS-2026.pdf'
-                },
-                videotrons: [
-                    { id: 1, name: 'Videotron Masjid', location: 'Kampus Utama, depan masjid', resolution: '1920x1080', orientation: 'landscape', operating_hours: '06.00 – 22.00 WIB', condition: 'normal' },
-                    { id: 2, name: 'Videotron Rektorat', location: 'Kampus Utama, dekat gedung rektorat', resolution: '1920x1080', orientation: 'landscape', operating_hours: '06.00 – 22.00 WIB', condition: 'normal' },
-                    { id: 3, name: 'Videotron Syariah', location: 'Fakultas Syariah & Hukum', resolution: '960x480', orientation: 'landscape', operating_hours: '06.00 – 22.00 WIB', condition: 'normal' },
-                    { id: 4, name: 'Videotron FITK', location: 'Gedung Fakultas Ilmu Tarbiyah & Keguruan', resolution: '1200x720', orientation: 'landscape', operating_hours: '06.00 – 22.00 WIB', condition: 'normal' },
-                    { id: 5, name: 'Videotron Siber', location: 'Gedung Siber & SSC', resolution: '1152x768', orientation: 'landscape', operating_hours: '06.00 – 22.00 WIB', condition: 'normal' },
-                    { id: 6, name: 'Videotron FEBI', location: 'Outdoor FEBI, di atas gedung FEBI', resolution: '1680x960', orientation: 'landscape', operating_hours: '07.00 – 24.00 WIB', condition: 'normal' }
-                ],
-                submissions: [
-                    {
-                        ticket_code: 'VTR-202611-0005',
-                        title: 'Sosialisasi AI dan Pemrograman Modern',
-                        pic_name: 'Ahmad Fadhil',
-                        organization: 'Himpunan Mahasiswa Informatika',
-                        start_date: '2026-11-20',
-                        end_date: '2026-11-24',
-                        status: 'menunggu',
-                        videotrons: ['Videotron Masjid', 'Videotron Siber'],
-                        admin_notes: null
-                    },
-                    {
-                        ticket_code: 'VTR-202611-0004',
-                        title: 'Pengumuman Wisuda Sarjana & Magister UINSSC',
-                        pic_name: 'Ahmad Fadhil',
-                        organization: 'Bagian Akademik Rektorat',
-                        start_date: '2026-11-18',
-                        end_date: '2026-11-22',
-                        status: 'disetujui',
-                        videotrons: ['Videotron Rektorat', 'Videotron FEBI'],
-                        admin_notes: 'Pengajuan telah diperiksa dan disetujui untuk penayangan sesuai jadwal.'
-                    },
-                    {
-                        ticket_code: 'VTR-202611-0003',
-                        title: 'Kuliah Umum Ekonomi & Perbankan Syariah',
-                        pic_name: 'Rizky Budianto',
-                        organization: 'DEMA Fakultas Syariah',
-                        start_date: '2026-11-25',
-                        end_date: '2026-11-27',
-                        status: 'revisi',
-                        videotrons: ['Videotron Syariah'],
-                        admin_notes: 'Tautan Google Drive materi video masih terkunci. Mohon ubah akses menjadi Anyone with the link.'
-                    }
-                ],
+    <!-- =========================================================
+         MODAL BANTUAN & KONTAK LAYANAN E-VITRON (100% IDENTIK)
+         ========================================================= -->
+    <div 
+        x-show="showHelpModal" 
+        x-cloak
+        class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 sm:p-6"
+        role="dialog" 
+        aria-modal="true">
+        
+        <!-- Backdrop -->
+        <div 
+            x-show="showHelpModal"
+            class="fixed inset-0 bg-black/60 cursor-pointer"
+            style="backdrop-filter: none !important; -webkit-backdrop-filter: none !important;"></div>
 
-                showToast(title, message) {
-                    this.toast = { visible: true, title, message };
-                    setTimeout(() => { this.toast.visible = false; }, 4200);
-                },
+        <!-- Modal Panel -->
+        <div 
+            x-show="showHelpModal"
+            class="relative w-full max-w-lg bg-white rounded-[22px] sm:rounded-[24px] p-5 sm:p-7 shadow-2xl border border-[#DCE7DF] z-10 overflow-hidden">
+            
+            <!-- Header Modal -->
+            <div class="flex items-start justify-between gap-3 pb-3.5 border-b border-[#DCE7DF]">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-[14px] bg-[#E8F3EC] text-[#0F3D2E]">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-[#0F3D2E] leading-tight">
+                            Pusat Bantuan Layanan E-VITRON
+                        </h3>
+                        <p class="text-xs text-[#647B71] font-medium mt-0.5">
+                            Layanan Pengelola E-VITRON • UIN Siber Syekh Nurjati Cirebon
+                        </p>
+                    </div>
+                </div>
+                <button 
+                    type="button" 
+                    @click="showHelpModal = false"
+                    class="text-[#647B71] hover:text-[#0F3D2E] p-1.5 rounded-lg hover:bg-[#F5F8F5] transition-colors focus:outline-none cursor-pointer">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
 
-                submitLogin() {
-                    const id = (this.loginForm.identifier || '').trim();
-                    if (!id) return;
+            <!-- Body Modal -->
+            <div class="py-3.5 space-y-3.5">
+                
+                <!-- Petunjuk Format Akun -->
+                <div class="bg-[#F5F8F5] p-3.5 rounded-[14px] border border-[#DCE7DF]/80 space-y-2 text-xs">
+                    <div class="font-bold text-[#0F3D2E] flex items-center gap-1.5">
+                        <svg class="w-4 h-4 text-[#D9A441]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Panduan Akun Masuk E-VITRON:</span>
+                    </div>
+                    <ul class="space-y-1.5 text-[#1A332C] pl-5 list-disc font-medium leading-relaxed">
+                        <li><strong class="text-[#0F3D2E]">Mahasiswa &amp; Dosen:</strong> Masuk langsung menggunakan <strong>NIM / NIP</strong> dan password Portal Akademik (tidak perlu mendaftar akun baru).</li>
+                        <li><strong class="text-[#0F3D2E]">Tendik &amp; Mitra Luar:</strong> Mendaftar terlebih dahulu melalui <a href="/register" @click="showHelpModal = false" class="font-bold text-[#0F3D2E] hover:text-[#D9A441] underline underline-offset-2 decoration-[#0F3D2E]/40 hover:decoration-[#D9A441] transition-colors">form registrasi pemohon</a>, lalu masuk menggunakan <strong>Alamat Email</strong> setelah akun disetujui Admin.</li>
+                    </ul>
+                </div>
 
-                    this.ssoLoading = true;
-                    const isEmail = id.includes('@');
-                    this.ssoLoadingText = isEmail
-                        ? 'Memverifikasi kredensial akun lokal E-VITRON...'
-                        : 'Menghubungkan ke Bridge SSO Portal Akademik UINSSC (bridge.uinssc.ac.id)...';
+                <!-- Kontak Bantuan Langsung -->
+                <div class="space-y-2.5">
+                    <span class="block text-xs font-bold text-[#0F3D2E] tracking-tight">Saluran Kontak Bantuan Resmi:</span>
 
-                    setTimeout(() => {
-                        this.ssoLoading = false;
-                        if (id.toLowerCase() === 'admin@uin.ac.id') {
-                            this.quickLogin('admin');
-                        } else if (isEmail) {
-                            this.currentUser = {
-                                name: id.split('@')[0].replace(/[._]/g, ' '),
-                                identifier: null,
-                                email: id,
-                                role: 'mitra',
-                                unit_or_prodi: 'Mitra / Tendik Terverifikasi',
-                                auth_type: 'local'
-                            };
-                            this.activePage = 'home';
-                            this.showToast('Login Akun Lokal Berhasil', 'Selamat datang di portal layanan E-VITRON UINSSC.');
-                        } else {
-                            const isNip = id.length >= 12;
-                            this.currentUser = {
-                                name: id === '2208101001' ? 'Ahmad Fadhil' : (isNip ? 'Dosen ' + id + ', M.Kom.' : 'Mahasiswa ' + id),
-                                identifier: id,
-                                email: id + '@uinssc.ac.id',
-                                role: isNip ? 'dosen' : 'mahasiswa',
-                                unit_or_prodi: isNip ? 'Fakultas Sains dan Teknologi Siber' : 'Teknik Informatika (S1)',
-                                auth_type: 'campus_sso'
-                            };
-                            this.activePage = 'home';
-                            this.showToast('Autentikasi Bridge SSO Berhasil', 'Profil sivitas akademika (' + id + ') berhasil disinkronkan.');
-                        }
-                    }, 650);
-                },
+                    <!-- WhatsApp Option -->
+                    <a href="https://wa.me/628557590909?text=Halo%20Admin%20SIPETRON%20UIN%20SSC,%20saya%20membutuhkan%20bantuan%20terkait%20layanan%20SIPETRON." 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       class="flex items-center justify-between p-3 rounded-[14px] border border-[#DCE7DF] hover:border-emerald-500 hover:bg-emerald-50/40 transition-all group">
+                        <div class="flex items-center gap-3">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                                    <path d="M12.01 2C6.5 2 2.02 6.48 2.02 12c0 1.84.5 3.56 1.37 5.05L2 22l5.09-1.34c1.44.79 3.09 1.23 4.92 1.23 5.51 0 9.99-4.48 9.99-10S17.52 2 12.01 2zm5.83 14.12c-.24.68-1.4 1.25-1.94 1.32-.51.07-1.15.1-3.34-.78-2.8-1.13-4.59-3.99-4.73-4.18-.14-.19-1.14-1.52-1.14-2.9 0-1.38.72-2.06.98-2.35.26-.28.56-.35.75-.35.19 0 .38 0 .54.01.17.01.4-.06.63.48.24.57.81 1.97.88 2.11.07.14.12.31.02.5-.1.19-.15.31-.29.47-.14.16-.3.35-.43.47-.14.14-.29.3-.12.59.16.29.73 1.21 1.57 1.96 1.08.97 1.99 1.27 2.28 1.41.28.14.45.12.61-.07.17-.19.72-.84.91-1.13.19-.28.38-.24.64-.14.26.09 1.66.78 1.94.92.28.14.47.21.54.33.07.12.07.69-.17 1.37z"/>
+                                </svg>
+                            </span>
+                            <div class="text-left">
+                                <h4 class="text-xs font-bold text-[#0F3D2E] group-hover:text-emerald-800">WhatsApp Helpdesk E-VITRON</h4>
+                                <p class="text-[11px] text-[#647B71]">+62 855-7590-909 (Chat Langsung)</p>
+                            </div>
+                        </div>
+                        <span class="text-xs font-bold text-emerald-700 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                            Hubungi
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                        </span>
+                    </a>
 
-                quickLogin(type) {
-                    if (type === 'mahasiswa') {
-                        this.currentUser = {
-                            name: 'Ahmad Fadhil',
-                            identifier: '2208101001',
-                            email: '2208101001@student.uin.ac.id',
-                            role: 'mahasiswa',
-                            unit_or_prodi: 'Teknik Informatika',
-                            auth_type: 'campus_sso'
-                        };
-                        this.activePage = 'home';
-                        this.showToast('Mode Mahasiswa (Bridge SSO)', 'Login sebagai Ahmad Fadhil (NIM 2208101001).');
-                    } else if (type === 'dosen') {
-                        this.currentUser = {
-                            name: 'Dr. H. Syarifudin, M.Kom',
-                            identifier: '198501012015011002',
-                            email: 'syarifudin@uin.ac.id',
-                            role: 'dosen',
-                            unit_or_prodi: 'Fakultas Sains dan Teknologi',
-                            auth_type: 'campus_sso'
-                        };
-                        this.activePage = 'home';
-                        this.showToast('Mode Dosen (Bridge SSO)', 'Login sebagai Dr. H. Syarifudin, M.Kom.');
-                    } else if (type === 'mitra') {
-                        this.currentUser = {
-                            name: 'Budi Santoso (Mitra)',
-                            identifier: null,
-                            email: 'mitra@kreatif.co.id',
-                            role: 'mitra',
-                            unit_or_prodi: 'PT Sponsor Kreatif',
-                            auth_type: 'local'
-                        };
-                        this.activePage = 'home';
-                        this.showToast('Mode Mitra Eksternal', 'Login menggunakan akun Mitra yang telah disetujui Admin.');
-                    } else if (type === 'admin') {
-                        this.currentUser = {
-                            name: 'Admin PUSTIKOM E-VITRON',
-                            identifier: 'ADM-001',
-                            email: 'admin@uin.ac.id',
-                            role: 'admin',
-                            unit_or_prodi: 'PUSTIKOM UINSSC',
-                            auth_type: 'local'
-                        };
-                        this.activePage = 'admin';
-                        this.showToast('Panel Admin Filament Aktif', 'Anda dapat menyetujui, meminta revisi, atau menolak pengajuan.');
-                    }
-                },
+                    <!-- Email Option Anti-Truncate di Mobile & Desktop -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-[14px] border border-[#DCE7DF] bg-white gap-2.5">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#E8F3EC] text-[#0F3D2E]">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                </svg>
+                            </span>
+                            <div class="text-left min-w-0">
+                                <h4 class="text-xs font-bold text-[#0F3D2E]">Email Resmi Layanan</h4>
+                                <p class="text-xs text-[#0F3D2E] font-semibold font-mono tracking-tight select-all">info@uinssc.ac.id</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5 shrink-0 pl-12 sm:pl-0">
+                            <!-- Tombol Salin Email -->
+                            <button 
+                                type="button" 
+                                @click="copyEmail()"
+                                class="px-2.5 py-1.5 rounded-lg text-xs font-bold text-[#0F3D2E] bg-[#E8F3EC] hover:bg-[#D4E8DC] transition-colors flex items-center gap-1 cursor-pointer"
+                                title="Salin alamat email info@uinssc.ac.id">
+                                <svg class="w-3.5 h-3.5 text-[#0F3D2E]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                                </svg>
+                                <span x-text="copiedEmail ? 'Tersalin! ✓' : 'Salin'">Salin</span>
+                            </button>
+                            <!-- Tombol Kirim Email Langsung -->
+                            <a 
+                                href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=info@uinssc.ac.id&amp;su=Bantuan%20Layanan%20SIPETRON%20UIN%20SSC" target="_blank" rel="noopener noreferrer"
+                                class="px-2.5 py-1.5 rounded-lg text-xs font-bold text-white bg-[#0F3D2E] hover:bg-[#0A2A20] transition-colors inline-flex items-center gap-1"
+                                title="Kirim email langsung melalui aplikasi email">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                                </svg>
+                                <span>Kirim</span>
+                            </a>
+                        </div>
+                    </div>
 
-                submitRegister() {
-                    this.showToast(
-                        'Pendaftaran Terkirim (Status: Pending)',
-                        'Akun ' + this.registerForm.email + ' menunggu verifikasi Admin PUSTIKOM. Notifikasi persetujuan akan dikirim via SMTP Gmail.'
-                    );
-                    this.authMode = 'login';
-                },
+                    <!-- Lokasi Offline -->
+                    <div class="flex items-start gap-2.5 p-3 rounded-[14px] bg-[#F5F8F5] text-xs text-[#647B71]">
+                        <svg class="w-4 h-4 text-[#0F3D2E] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <p class="text-[11px] leading-relaxed">
+                            <strong>Layanan Langsung:</strong> Gedung Rektorat Kampus UIN Siber Syekh Nurjati Cirebon (UINSSC). Jam pelayanan: Senin – Jumat (08.00 – 16.00 WIB).
+                        </p>
+                    </div>
 
-                logout() {
-                    this.currentUser = null;
-                    this.authMode = 'login';
-                },
+                </div>
 
-                selectVideotronForWizard(id) {
-                    if (!this.wizardForm.videotronIds.includes(id)) {
-                        this.wizardForm.videotronIds.push(id);
-                    }
-                    this.activePage = 'wizard';
-                    this.wizardStep = 1;
-                },
+            </div>
 
-                submitWizard() {
-                    const chosenNames = this.videotrons
-                        .filter(v => this.wizardForm.videotronIds.includes(v.id))
-                        .map(v => v.name);
-                    const code = 'VTR-202611-000' + (this.submissions.length + 3);
-                    this.submissions.unshift({
-                        ticket_code: code,
-                        title: this.wizardForm.title || 'Publikasi Kegiatan Kampus',
-                        pic_name: this.currentUser.name,
-                        organization: this.wizardForm.organization || this.currentUser.unit_or_prodi,
-                        start_date: this.wizardForm.start_date,
-                        end_date: this.wizardForm.end_date,
-                        status: 'menunggu',
-                        videotrons: chosenNames.length ? chosenNames : ['Videotron Masjid'],
-                        admin_notes: null
-                    });
-                    this.activePage = 'submissions';
-                    this.wizardStep = 1;
-                    this.showToast('Pengajuan Berhasil Dikirim!', 'Tiket #' + code + ' telah masuk ke antrean kurasi Admin PUSTIKOM.');
-                },
+            <!-- Footer Modal -->
+            <div class="pt-3 border-t border-[#DCE7DF] flex justify-end">
+                <button 
+                    type="button" 
+                    @click="showHelpModal = false"
+                    class="px-5 py-2 rounded-xl bg-[#0F3D2E] text-white text-xs font-bold hover:bg-[#0A2A20] transition-colors cursor-pointer">
+                    Tutup
+                </button>
+            </div>
 
-                adminDecision(item, newStatus) {
-                    item.status = newStatus;
-                    if (newStatus === 'disetujui') {
-                        item.admin_notes = 'Pengajuan telah diverifikasi dan disetujui untuk tayang pada playlist videotron.';
-                        this.showToast('Tiket Disetujui & Email Terkirim', 'Status ' + item.ticket_code + ' diubah ke DISETUJUI (Notifikasi Portal + Email SMTP terkirim).');
-                    } else if (newStatus === 'revisi') {
-                        item.admin_notes = 'Mohon perbaiki dokumen surat permohonan PDF dan akses link Google Drive materi video.';
-                        this.showToast('Permintaan Revisi Dikirim', 'Catatan revisi untuk ' + item.ticket_code + ' telah dikirim ke pemohon.');
-                    } else if (newStatus === 'ditolak') {
-                        item.admin_notes = 'Jadwal atau materi belum memenuhi ketentuan pedoman penayangan videotron kampus.';
-                        this.showToast('Pengajuan Ditolak', 'Status tiket ' + item.ticket_code + ' diperbarui menjadi DITOLAK.');
-                    }
-                },
+        </div>
+    </div>
 
-                sendRevisionReply(item) {
-                    item.status = 'menunggu';
-                    item.admin_notes = 'Pemohon telah mengunggah perbaikan berkas/tautan materi (Menunggu verifikasi ulang).';
-                    this.showToast('Perbaikan Revisi Terkirim', 'Tiket ' + item.ticket_code + ' kembali berstatus MENUNGGU untuk ditinjau Admin.');
-                }
-            };
-        }
-    </script>
-</body>
+<script src="/js/demo-router.js"></script></body>
 </html>

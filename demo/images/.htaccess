@@ -1,0 +1,23 @@
+# ==============================================================================
+# SIPETRON Anti-Judol & Anti-Web-Shell Firewall (Folder Gambar Publik)
+# Memblokir eksekusi script PHP, halaman HTML judol, SVG berbahaya, & directory listing
+# ==============================================================================
+Options -Indexes -ExecCGI
+
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+
+<FilesMatch "\.(?i:php|php[0-9]|phtml|phar|inc|sh|pl|py|cgi|asp|aspx|jsp|htm|html|shtml|svg|xml|js|mjs|exe|bat|cmd|htaccess)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
