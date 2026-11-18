@@ -21,14 +21,14 @@
               <span class="font-montserrat text-[19px] sm:text-[21px] font-extrabold tracking-tight text-[#0E4D3C] leading-none">E-VITRON</span>
               <!-- Teks sub di Mobile lebih ringkas, Desktop lengkap -->
               <span class="text-[9px] sm:text-[9.5px] font-semibold text-[#B88219] tracking-tight mt-1 leading-none md:hidden">Pengajuan Videotron</span>
-              <span class="hidden md:inline-block text-[9.5px] font-semibold text-[#B88219] tracking-tight mt-1 leading-none">Layanan Pengajuan Penayangan Videotron</span>
+              <span class="evitron-nav-subtitle hidden md:inline-block text-[9.5px] font-semibold text-[#B88219] tracking-tight mt-1 leading-none">Layanan Pengajuan Penayangan Videotron</span>
             </div>
           </a>
         </div>
 
         <!-- Navigasi Menu Tengah (Desktop Only) -->
         <nav aria-label="Navigasi utama" class="hidden md:flex h-full items-center">
-          <ul class="flex h-full items-center gap-8">
+          <ul class="evitron-nav-list flex h-full items-center gap-8">
             <li class="h-full">
               <a href="{{ route('home') }}" class="relative flex h-full items-center group/nav text-sm outline-none select-none">
                 <span class="nav-link {{ request()->routeIs('home') ? 'font-black text-[#0E4D3C]' : 'font-semibold text-[#1E5546]' }}">Beranda</span>

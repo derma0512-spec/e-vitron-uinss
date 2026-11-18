@@ -90,7 +90,7 @@
     </div>
 
     {{-- Feature Bar Desktop (md:block) — Modern Rounded Rectangle --}}
-    <div class="absolute hidden md:block z-20"
+    <div class="evitron-hero-feature-bar absolute hidden md:block z-20"
       style="bottom: 20px; right: 16px; width: min(50vw, 580px); border-radius: 50px; background-color: rgba(255, 255, 255, 0.82); border: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; padding: 12px 36px; mask-image: linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%); -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%);">
 
       {{-- Grid 3 Kolom Sama Lebar dengan Divider Vertikal --}}
@@ -98,13 +98,13 @@
 
         {{-- Kolom 1: Mudah dan Cepat --}}
         <div class="flex items-center justify-center gap-2.5 px-2">
-          <span class="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full text-white"
+          <span class="evitron-hero-feature-icon flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full text-white"
             style="background: linear-gradient(145deg, #D9A93B 0%, #B87C1A 100%); box-shadow: 0 3px 10px rgba(196, 138, 37, 0.28);">
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
             </svg>
           </span>
-          <div class="text-[12px] font-semibold leading-[1.38] text-[#0E4D3C]">
+          <div class="evitron-hero-feature-text text-[12px] font-semibold leading-[1.38] text-[#0E4D3C]">
             Mudah<br>dan Cepat
           </div>
         </div>
@@ -114,13 +114,13 @@
 
         {{-- Kolom 2: Tersedia di Berbagai Lokasi --}}
         <div class="flex items-center justify-center gap-2.5 px-2">
-          <span class="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full text-white"
+          <span class="evitron-hero-feature-icon flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full text-white"
             style="background: linear-gradient(145deg, #D9A93B 0%, #B87C1A 100%); box-shadow: 0 3px 10px rgba(196, 138, 37, 0.28);">
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
             </svg>
           </span>
-          <div class="text-[12px] font-semibold leading-[1.38] text-[#0E4D3C]">
+          <div class="evitron-hero-feature-text text-[12px] font-semibold leading-[1.38] text-[#0E4D3C]">
             Tersedia di<br>Berbagai Lokasi
           </div>
         </div>
@@ -130,13 +130,13 @@
 
         {{-- Kolom 3: Terintegrasi dengan Sistem --}}
         <div class="flex items-center justify-center gap-2.5 px-2">
-          <span class="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full text-white"
+          <span class="evitron-hero-feature-icon flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full text-white"
             style="background: linear-gradient(145deg, #D9A93B 0%, #B87C1A 100%); box-shadow: 0 3px 10px rgba(196, 138, 37, 0.28);">
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.3">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
           </span>
-          <div class="text-[12px] font-semibold leading-[1.38] text-[#0E4D3C]">
+          <div class="evitron-hero-feature-text text-[12px] font-semibold leading-[1.38] text-[#0E4D3C]">
             Terintegrasi<br>dengan Sistem
           </div>
         </div>

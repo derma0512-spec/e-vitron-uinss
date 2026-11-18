@@ -33,5 +33,38 @@
             transform: none !important;
         }
     }
+
+    @media (min-width: 768px) and (max-width: 1023px) and (orientation: portrait) {
+        .evitron-nav-subtitle {
+            white-space: nowrap !important;
+        }
+
+        .evitron-nav-list {
+            gap: 1.05rem !important;
+        }
+
+        .evitron-nav-list .nav-link {
+            font-size: 0.8125rem !important;
+            white-space: nowrap !important;
+        }
+
+        .evitron-hero-feature-bar {
+            width: 505px !important;
+            right: 12px !important;
+            bottom: 14px !important;
+            padding: 10px 22px !important;
+        }
+
+        .evitron-hero-feature-icon {
+            width: 34px !important;
+            height: 34px !important;
+        }
+
+        .evitron-hero-feature-text {
+            font-size: 11px !important;
+            line-height: 1.3 !important;
+            white-space: nowrap !important;
+        }
+    }
 </style>
 @endif
