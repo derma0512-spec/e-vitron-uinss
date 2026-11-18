@@ -23,7 +23,8 @@ class ExhibitionDemoSeeder extends Seeder
             return;
         }
 
-        $applicantEmail = trim((string) config('services.demo.applicant_email', 'pemohon.demo@uinssc.ac.id'));
+        $applicantIdentifier = trim((string) config('services.demo.applicant_identifier', '2208101001'));
+        $applicantEmail = trim((string) config('services.demo.applicant_email', '2208101001@student.uin.ac.id'));
         $applicantPassword = (string) (config('services.demo.applicant_password') ?: $adminPassword);
 
         $videotrons = VideotronSeeder::seedMasterVideotrons();
@@ -43,15 +44,15 @@ class ExhibitionDemoSeeder extends Seeder
         );
 
         $applicant = User::updateOrCreate(
-            ['email' => strtolower($applicantEmail)],
+            ['identifier' => $applicantIdentifier],
             [
                 'name' => 'Ahmad Fadhil',
+                'email' => strtolower($applicantEmail),
                 'password' => Hash::make($applicantPassword),
                 'role' => 'mahasiswa',
-                'identifier' => '2208101001',
                 'phone' => '081234567890',
                 'unit_or_prodi' => 'Informatika',
-                'auth_type' => 'local',
+                'auth_type' => 'campus_sso',
                 'account_status' => 'approved',
             ]
         );

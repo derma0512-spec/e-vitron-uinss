@@ -47,7 +47,7 @@ return [
         'admin_email' => env('DEMO_ADMIN_EMAIL'),
         'admin_password' => env('DEMO_ADMIN_PASSWORD'),
         'applicant_identifier' => env('DEMO_APPLICANT_IDENTIFIER', '2208101001'),
-        'applicant_email' => env('DEMO_APPLICANT_EMAIL', 'pemohon.demo@uinssc.ac.id'),
+        'applicant_email' => env('DEMO_APPLICANT_EMAIL', '2208101001@student.uin.ac.id'),
         'applicant_password' => env('DEMO_APPLICANT_PASSWORD', env('DEMO_ADMIN_PASSWORD')),
     ],
 

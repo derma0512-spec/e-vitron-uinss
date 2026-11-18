@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Resources\UserResource;
 use App\Models\Submission;
 use App\Models\User;
 use App\Notifications\AccountApprovalNotification;
@@ -307,7 +308,7 @@ class AuthTest extends TestCase
             'services.demo.admin_email' => 'admin.evitron@uinssc.ac.id',
             'services.demo.admin_password' => 'UinsscDemo26',
             'services.demo.applicant_identifier' => '2208101001',
-            'services.demo.applicant_email' => 'pemohon.demo@uinssc.ac.id',
+            'services.demo.applicant_email' => '2208101001@student.uin.ac.id',
             'services.demo.applicant_password' => 'UinsscDemo26',
         ]);
 
@@ -328,8 +329,11 @@ class AuthTest extends TestCase
         ]);
         $this->assertDatabaseHas('users', [
             'identifier' => '2208101001',
+            'email' => '2208101001@student.uin.ac.id',
             'role' => 'mahasiswa',
+            'auth_type' => 'campus_sso',
         ]);
+        $this->assertSame(0, UserResource::getEloquentQuery()->count());
         $this->assertSame(3, Submission::count());
 
         $applicantLogin = $this->post('/login', [

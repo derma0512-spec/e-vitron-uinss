@@ -33,7 +33,7 @@ class UserResource extends Resource
     public static function getNavigationBadge(): ?string
     {
         try {
-            $count = User::where('role', '!=', 'admin')
+            $count = User::whereNotIn('role', ['admin', 'mahasiswa', 'dosen'])
                 ->where('auth_type', 'local')
                 ->where('account_status', 'pending')
                 ->count();
@@ -52,7 +52,7 @@ class UserResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->where('role', '!=', 'admin')
+            ->whereNotIn('role', ['admin', 'mahasiswa', 'dosen'])
             ->where('auth_type', 'local')
             ->orderByRaw("CASE WHEN account_status = 'pending' THEN 0 WHEN account_status = 'approved' THEN 1 ELSE 2 END")
             ->latest();
