@@ -58,9 +58,8 @@
 
 <link rel="stylesheet" href="{{ asset('css/sipetron-custom.css') }}?v=20261109c">
 
-@if(config('services.demo.quick_login'))
-<style id="sipetron-demo-portrait-layout" data-testid="demo-admin-kiosk-viewport">
-    /* Khusus Mode Demo Pameran (Railway): tata letak Admin 100% tajam tanpa zoom-out untuk TV Standing Kiosk Portrait (1080x1920 / 864x1536) */
+<style id="sipetron-portrait-responsive-styles">
+    /* Dukungan tata letak Admin untuk Tablet & Layar Anjungan Kiosk Portrait (min-width: 768px & tinggi > lebar) tanpa mengubah Laptop Landscape maupun Mobile HP */
     @media (min-width: 1024px) and (orientation: portrait) {
         .fi-topbar-open-sidebar-btn,
         .fi-topbar-close-sidebar-btn {
@@ -139,7 +138,6 @@
         }
     }
 </style>
-@endif
 
 <script type="speculationrules">
 {

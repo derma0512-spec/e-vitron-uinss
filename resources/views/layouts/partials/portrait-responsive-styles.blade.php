@@ -1,6 +1,5 @@
-@if(config('services.demo.quick_login'))
-<style id="demo-kiosk-portrait-layout" data-testid="demo-kiosk-viewport">
-    /* Khusus Mode Demo Pameran (Railway): tata letak 1 kolom vertikal proporsional saat dibuka di TV Standing Kiosk (Portrait) tanpa zoom-out */
+<style id="evitron-portrait-responsive-styles">
+    /* Dukungan tata letak Tablet & Anjungan Kiosk Portrait (min-width: 768px & tinggi > lebar) tanpa mengubah Laptop Landscape maupun Mobile HP */
     @media (min-width: 768px) and (orientation: portrait) {
         .evitron-auth-main {
             max-width: 760px !important;
@@ -67,4 +66,3 @@
         }
     }
 </style>
-@endif

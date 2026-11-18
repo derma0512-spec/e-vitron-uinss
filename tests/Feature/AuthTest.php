@@ -302,8 +302,8 @@ class AuthTest extends TestCase
         $defaultLoginView = $this->get('/login');
         $defaultLoginView->assertStatus(200);
         $defaultLoginView->assertDontSee('Akses Cepat Demo');
-        $defaultLoginView->assertDontSee('demo-kiosk-viewport', false);
-        $defaultLoginView->assertDontSee('demo-kiosk-portrait-layout', false);
+        $defaultLoginView->assertDontSee('demo-quick-login', false);
+        $defaultLoginView->assertSee('evitron-portrait-responsive-styles', false);
 
         config([
             'services.demo.quick_login' => true,
@@ -320,7 +320,7 @@ class AuthTest extends TestCase
         $demoLoginView->assertSee('Pemohon Demo');
         $demoLoginView->assertSee('Admin E-VITRON');
         $demoLoginView->assertSee('2208101001');
-        $demoLoginView->assertSee('demo-kiosk-portrait-layout', false);
+        $demoLoginView->assertSee('evitron-portrait-responsive-styles', false);
 
         $this->artisan('db:seed', ['--class' => 'Database\\Seeders\\ExhibitionDemoSeeder', '--force' => true])
             ->assertExitCode(0);
@@ -340,13 +340,14 @@ class AuthTest extends TestCase
         $this->assertSame(3, Submission::count());
 
         $admin = User::where('email', 'admin.evitron@uinssc.ac.id')->firstOrFail();
-        $adminDashboard = $this->actingAs($admin)->get('/admin');
-        $adminDashboard->assertStatus(200);
-        $adminDashboard->assertSee('demo-admin-kiosk-viewport', false);
-        $adminDashboard->assertSee('sipetron-demo-portrait-layout', false);
+        config(['services.demo.quick_login' => false]);
+        $adminDashboardDefault = $this->actingAs($admin)->get('/admin');
+        $adminDashboardDefault->assertStatus(200);
+        $adminDashboardDefault->assertSee('sipetron-portrait-responsive-styles', false);
 
         $this->post('/logout');
 
+        config(['services.demo.quick_login' => true]);
         $applicantLogin = $this->post('/login', [
             'identifier' => '2208101001',
             'password' => 'UinsscDemo26',
