@@ -44,7 +44,7 @@
                          class="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden z-10 my-auto flex flex-col max-h-[90vh] cursor-default">
 
                         <!-- Header Modal Kompak & Profesional (Optimized Mobile) -->
-                        <div class="px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-100 flex items-center justify-between gap-3 shrink-0 bg-white">
+                        <div class="px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-100 flex items-start justify-between gap-3 shrink-0 bg-white">
                             <div class="flex items-center gap-3">
                                 <span class="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-[#E3F1EA] text-[#0E4D3C] border border-[#0E4D3C]/15 shadow-2xs shrink-0">
                                     <svg class="w-4 h-4 sm:w-4.5 sm:h-4.5 text-[#0E4D3C] shrink-0" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
@@ -61,13 +61,15 @@
                                 </div>
                             </div>
 
-                            <!-- Tombol Tutup X Lingkaran Bulat Halus -->
+                            <!-- Tombol Tutup X Bersih & Selaras Modal Bantuan -->
                             <button type="button" 
                                     @click="closeNoticeModal()" 
                                     aria-label="Tutup ketentuan pengajuan"
                                     title="Tutup"
-                                    class="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200/80 bg-slate-50/80 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0E4D3C]/30">
-                                <svg class="w-4 h-4 shrink-0" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    class="text-[#647B71] hover:text-[#0F3D2E] p-1.5 rounded-lg hover:bg-[#F5F8F5] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0E4D3C]/30 cursor-pointer shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
                             </button>
                         </div>
 
