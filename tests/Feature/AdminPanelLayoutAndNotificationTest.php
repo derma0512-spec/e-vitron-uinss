@@ -60,6 +60,7 @@ class AdminPanelLayoutAndNotificationTest extends TestCase
         $response->assertSee('Selesai Tayang');
         $response->assertSee('Jadwal Tayang Terdekat');
         $response->assertSee('Kondisi Perangkat Videotron');
+        $response->assertSee('html:has(.fi-main-sidebar.fi-sidebar-open)', false);
     }
 
     public function test_admin_can_interact_with_filament_database_notifications(): void

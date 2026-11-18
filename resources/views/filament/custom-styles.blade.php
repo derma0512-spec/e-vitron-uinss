@@ -137,6 +137,25 @@
             padding-right: 0.5rem !important;
         }
     }
+
+    /* Kunci scroll halaman belakang saat sidebar laci (< 1024px) sedang dibuka agar fokus & selaras Portal Pemohon */
+    @media (max-width: 1023px) {
+        html:has(.fi-main-sidebar.fi-sidebar-open),
+        body:has(.fi-main-sidebar.fi-sidebar-open) {
+            overflow: hidden !important;
+            overscroll-behavior: none !important;
+        }
+
+        .fi-sidebar-close-overlay {
+            overscroll-behavior: contain !important;
+            touch-action: none !important;
+        }
+
+        aside.fi-main-sidebar.fi-sidebar-open {
+            overscroll-behavior: contain !important;
+            touch-action: pan-y !important;
+        }
+    }
 </style>
 
 <script type="speculationrules">
