@@ -52,10 +52,10 @@
         <!-- Modal Panel -->
         <div 
             x-show="showHelpModal"
-            class="relative w-full max-w-lg bg-white rounded-[22px] sm:rounded-[24px] p-5 sm:p-7 shadow-2xl border border-[#DCE7DF] z-10 overflow-hidden">
+            class="relative w-full max-w-lg bg-white rounded-[22px] sm:rounded-[24px] p-5 sm:p-7 shadow-2xl border border-[#DCE7DF] z-10 overflow-hidden my-auto max-h-[85vh] sm:max-h-none flex flex-col sm:block">
             
             <!-- Header Modal -->
-            <div class="flex items-start justify-between gap-3 pb-3.5 border-b border-[#DCE7DF]">
+            <div class="flex items-start justify-between gap-3 pb-3.5 border-b border-[#DCE7DF] shrink-0">
                 <div class="flex items-center gap-3">
                     <div class="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-[14px] bg-[#E8F3EC] text-[#0F3D2E]">
                         <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
@@ -82,7 +82,7 @@
             </div>
 
             <!-- Body Modal -->
-            <div class="py-3.5 space-y-3.5">
+            <div class="py-3.5 space-y-3.5 overflow-y-auto sm:overflow-visible flex-1">
                 
                 <!-- Petunjuk Format Akun -->
                 <div class="bg-[#F5F8F5] p-3.5 rounded-[14px] border border-[#DCE7DF]/80 space-y-2 text-xs">
@@ -179,7 +179,7 @@
             </div>
 
             <!-- Footer Modal -->
-            <div class="pt-3 border-t border-[#DCE7DF] flex justify-end">
+            <div class="pt-3 border-t border-[#DCE7DF] flex justify-end shrink-0">
                 <button 
                     type="button" 
                     @click="showHelpModal = false"
