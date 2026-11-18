@@ -284,11 +284,22 @@
                     @endif
 
                     @if(session('success'))
-                        <div class="mb-3.5 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2.5 text-xs text-emerald-800 shadow-sm">
-                            <svg class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            <span class="font-medium leading-relaxed">{{ session('success') }}</span>
+                        <div x-data="{ showSuccessAlert: true }"
+                             x-init="setTimeout(() => showSuccessAlert = false, 5000)"
+                             x-show="showSuccessAlert"
+                             x-transition.opacity.duration.300ms
+                             class="mb-3.5 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start justify-between gap-2.5 text-xs text-emerald-800 shadow-sm">
+                            <div class="flex items-start gap-2.5 min-w-0">
+                                <svg class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span class="font-medium leading-relaxed">{{ session('success') }}</span>
+                            </div>
+                            <button type="button" @click="showSuccessAlert = false" class="text-emerald-600/70 hover:text-emerald-800 shrink-0 mt-0.5 cursor-pointer" aria-label="Tutup notifikasi">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
                         </div>
                     @endif
 

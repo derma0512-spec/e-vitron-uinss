@@ -10,6 +10,6 @@ class FilamentLogoutResponse implements LogoutResponseContract
 {
     public function toResponse($request): RedirectResponse|Redirector
     {
-        return redirect()->route('login')->with('success', 'Anda telah berhasil keluar.');
+        return redirect()->route('login');
     }
 }
