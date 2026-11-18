@@ -46,6 +46,7 @@ return [
         'quick_login' => (bool) env('DEMO_QUICK_LOGIN', filled(env('DEMO_ADMIN_EMAIL')) && filled(env('DEMO_ADMIN_PASSWORD'))),
         'admin_email' => env('DEMO_ADMIN_EMAIL'),
         'admin_password' => env('DEMO_ADMIN_PASSWORD'),
+        'applicant_identifier' => env('DEMO_APPLICANT_IDENTIFIER', '2208101001'),
         'applicant_email' => env('DEMO_APPLICANT_EMAIL', 'pemohon.demo@uinssc.ac.id'),
         'applicant_password' => env('DEMO_APPLICANT_PASSWORD', env('DEMO_ADMIN_PASSWORD')),
     ],

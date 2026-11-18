@@ -393,7 +393,7 @@
                             </div>
                             <div class="grid grid-cols-2 gap-2">
                                 <button type="button"
-                                    @click="fillDemo('applicant', @js(config('services.demo.applicant_email')), @js(config('services.demo.applicant_password')))"
+                                    @click="fillDemo('applicant', @js(config('services.demo.applicant_identifier')), @js(config('services.demo.applicant_password')))"
                                     :class="activeDemo === 'applicant' ? 'bg-[#E8F3EC] border-[#0F3D2E] text-[#0F3D2E] ring-1 ring-[#0F3D2E]/15' : 'bg-[#FBFDFB] hover:bg-[#F5F8F5] border-[#DCE7DF] text-[#0F3D2E]'"
                                     class="group flex items-center justify-center gap-1.5 h-[36px] px-2.5 rounded-[10px] border text-xs font-bold transition-all cursor-pointer select-none">
                                     <svg class="w-3.5 h-3.5 text-[#0F3D2E] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">

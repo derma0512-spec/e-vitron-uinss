@@ -306,6 +306,7 @@ class AuthTest extends TestCase
             'services.demo.quick_login' => true,
             'services.demo.admin_email' => 'admin.evitron@uinssc.ac.id',
             'services.demo.admin_password' => 'UinsscDemo26',
+            'services.demo.applicant_identifier' => '2208101001',
             'services.demo.applicant_email' => 'pemohon.demo@uinssc.ac.id',
             'services.demo.applicant_password' => 'UinsscDemo26',
         ]);
@@ -315,6 +316,7 @@ class AuthTest extends TestCase
         $demoLoginView->assertSee('Akses Cepat Demo');
         $demoLoginView->assertSee('Pemohon Demo');
         $demoLoginView->assertSee('Admin Kurator');
+        $demoLoginView->assertSee('2208101001');
 
         $this->artisan('db:seed', ['--class' => 'Database\\Seeders\\ExhibitionDemoSeeder', '--force' => true])
             ->assertExitCode(0);
@@ -324,13 +326,13 @@ class AuthTest extends TestCase
             'role' => 'admin',
         ]);
         $this->assertDatabaseHas('users', [
-            'email' => 'pemohon.demo@uinssc.ac.id',
+            'identifier' => '2208101001',
             'role' => 'mahasiswa',
         ]);
         $this->assertSame(3, Submission::count());
 
         $applicantLogin = $this->post('/login', [
-            'identifier' => 'pemohon.demo@uinssc.ac.id',
+            'identifier' => '2208101001',
             'password' => 'UinsscDemo26',
         ]);
         $applicantLogin->assertRedirect(route('home'));

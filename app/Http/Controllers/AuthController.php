@@ -210,6 +210,18 @@ class AuthController extends Controller
 
         // 2. Skenario PENGAJU: Wajib menggunakan nomor identitas (angka)
         if (ctype_digit($input)) {
+            $localDemoApplicant = User::where('identifier', $input)
+                ->where('auth_type', 'local')
+                ->whereIn('role', ['mahasiswa', 'dosen'])
+                ->first();
+
+            if ($localDemoApplicant && Hash::check($password, $localDemoApplicant->password)) {
+                Auth::login($localDemoApplicant, $request->boolean('remember'));
+                $request->session()->regenerate();
+
+                return redirect()->route('home')->with('success', 'Selamat datang, '.$localDemoApplicant->name.'!');
+            }
+
             $bridgeSSO = app(BridgeSSOService::class);
 
             if ($bridgeSSO->isEnabled()) {
