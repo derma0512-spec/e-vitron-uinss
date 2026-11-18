@@ -303,6 +303,7 @@ class AuthTest extends TestCase
         $defaultLoginView->assertStatus(200);
         $defaultLoginView->assertDontSee('Akses Cepat Demo');
         $defaultLoginView->assertDontSee('demo-kiosk-viewport', false);
+        $defaultLoginView->assertDontSee('demo-kiosk-portrait-layout', false);
 
         config([
             'services.demo.quick_login' => true,
@@ -319,7 +320,7 @@ class AuthTest extends TestCase
         $demoLoginView->assertSee('Pemohon Demo');
         $demoLoginView->assertSee('Admin E-VITRON');
         $demoLoginView->assertSee('2208101001');
-        $demoLoginView->assertSee('demo-kiosk-viewport', false);
+        $demoLoginView->assertSee('demo-kiosk-portrait-layout', false);
 
         $this->artisan('db:seed', ['--class' => 'Database\\Seeders\\ExhibitionDemoSeeder', '--force' => true])
             ->assertExitCode(0);
@@ -337,6 +338,14 @@ class AuthTest extends TestCase
         ]);
         $this->assertSame(0, UserResource::getEloquentQuery()->count());
         $this->assertSame(3, Submission::count());
+
+        $admin = User::where('email', 'admin.evitron@uinssc.ac.id')->firstOrFail();
+        $adminDashboard = $this->actingAs($admin)->get('/admin');
+        $adminDashboard->assertStatus(200);
+        $adminDashboard->assertSee('demo-admin-kiosk-viewport', false);
+        $adminDashboard->assertSee('sipetron-demo-portrait-layout', false);
+
+        $this->post('/logout');
 
         $applicantLogin = $this->post('/login', [
             'identifier' => '2208101001',

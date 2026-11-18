@@ -148,14 +148,14 @@
     </div>
 
     <!-- MAIN CONTAINER (1240px max, Terpusat, Proporsional dan Pas di Layar Laptop Tanpa Scroll) -->
-    <main class="relative z-10 mx-auto w-full max-w-[1240px] px-4 sm:px-8 py-3 sm:py-3 lg:py-4 flex-1 flex items-center justify-center">
+    <main class="evitron-auth-main relative z-10 mx-auto w-full max-w-[1240px] px-4 sm:px-8 py-3 sm:py-3 lg:py-4 flex-1 flex items-center justify-center">
         
-        <div class="w-full grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-6 lg:gap-12 items-center">
+        <div class="evitron-auth-grid w-full grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-6 lg:gap-12 items-center">
 
             <!-- =========================================================
                  KOLOM KIRI: BRANDING & GAMBAR HERO
                  ========================================================= -->
-            <div class="lg:col-span-7 flex flex-col justify-between space-y-2.5 sm:space-y-3.5 select-none">
+            <div class="evitron-auth-hero lg:col-span-7 flex flex-col justify-between space-y-2.5 sm:space-y-3.5 select-none">
                 
                 <!-- Tampilan Khusus Mobile (< sm): Crown Lockup Simetris, Elegan, dan Pas 1 Layar -->
                 <div class="sm:hidden flex flex-col items-center text-center select-none pt-1">
@@ -200,7 +200,7 @@
                 </div>
 
                 <!-- 3. Gambar Hero Kampus & Videotron (Ditampilkan pada Layar Tablet & Desktop) -->
-                <div class="hidden sm:block w-full aspect-[16/9] max-h-[175px] sm:max-h-[195px] lg:max-h-[235px] rounded-[16px] overflow-hidden border border-[#DCE7DF] shadow-sm bg-white select-none">
+                <div class="evitron-auth-hero-img hidden sm:block w-full aspect-[16/9] max-h-[175px] sm:max-h-[195px] lg:max-h-[235px] rounded-[16px] overflow-hidden border border-[#DCE7DF] shadow-sm bg-white select-none">
                     <img 
                         src="{{ asset('images/campus-hero-clean.jpg') }}?v=2" 
                         alt="Videotron Kampus UIN Siber Syekh Nurjati Cirebon" 
@@ -258,8 +258,8 @@
             <!-- =========================================================
                  KOLOM KANAN: KARTU LOGIN
                  ========================================================= -->
-            <div class="lg:col-span-5 flex justify-center lg:justify-end">
-                <div class="w-full max-w-[450px] bg-white rounded-[22px] sm:rounded-[24px] p-5 sm:p-7 lg:p-7.5 border border-[#DCE7DF] shadow-[0_12px_40px_rgba(15,61,46,0.06)]">
+            <div class="evitron-auth-card-col lg:col-span-5 flex justify-center lg:justify-end">
+                <div class="evitron-auth-card w-full max-w-[450px] bg-white rounded-[22px] sm:rounded-[24px] p-5 sm:p-7 lg:p-7.5 border border-[#DCE7DF] shadow-[0_12px_40px_rgba(15,61,46,0.06)]">
                     
                     <!-- Header Kartu: Logo E-VITRON & Judul (Tanpa Box) -->
                     <div class="text-center mb-3.5 sm:mb-5">
