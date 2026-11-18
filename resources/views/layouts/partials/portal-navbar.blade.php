@@ -1,6 +1,6 @@
     <!-- HEADER / NAVBAR -->
     <header class="fixed top-0 left-0 right-0 z-50 h-[70px] border-b border-[#E6ECE9] bg-white/95 backdrop-blur-md shadow-xs">
-      <div class="mx-auto flex h-full max-w-[1400px] items-center justify-between px-4 sm:px-6 md:px-10 lg:px-14">
+      <div class="evitron-navbar-inner mx-auto flex h-full max-w-[1400px] items-center justify-between px-4 sm:px-6 md:px-10 lg:px-14">
 
         <!-- KIRI: Tombol Hamburger Mobile (< md) -->
         <div class="flex items-center md:hidden">
@@ -20,7 +20,7 @@
             <div class="flex flex-col justify-center leading-none">
               <span class="font-montserrat text-[19px] sm:text-[21px] font-extrabold tracking-tight text-[#0E4D3C] leading-none">E-VITRON</span>
               <!-- Teks sub di Mobile lebih ringkas, Desktop lengkap -->
-              <span class="text-[9px] sm:text-[9.5px] font-semibold text-[#B88219] tracking-tight mt-1 leading-none md:hidden">Pengajuan Videotron</span>
+              <span class="evitron-nav-subtitle-short text-[9px] sm:text-[9.5px] font-semibold text-[#B88219] tracking-tight mt-1 leading-none md:hidden">Pengajuan Videotron</span>
               <span class="evitron-nav-subtitle hidden md:inline-block text-[9.5px] font-semibold text-[#B88219] tracking-tight mt-1 leading-none">Layanan Pengajuan Penayangan Videotron</span>
             </div>
           </a>

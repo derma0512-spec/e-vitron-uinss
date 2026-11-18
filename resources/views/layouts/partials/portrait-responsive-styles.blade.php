@@ -34,12 +34,22 @@
     }
 
     @media (min-width: 768px) and (max-width: 1023px) and (orientation: portrait) {
+        .evitron-navbar-inner {
+            padding-left: 1.25rem !important;
+            padding-right: 1.25rem !important;
+        }
+
         .evitron-nav-subtitle {
+            display: none !important;
+        }
+
+        .evitron-nav-subtitle-short {
+            display: inline-block !important;
             white-space: nowrap !important;
         }
 
         .evitron-nav-list {
-            gap: 1.05rem !important;
+            gap: 1.3rem !important;
         }
 
         .evitron-nav-list .nav-link {
