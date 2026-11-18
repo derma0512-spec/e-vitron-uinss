@@ -27,11 +27,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Enable Apache modules and point DocumentRoot to /var/www/html/public
-RUN a2enmod rewrite expires headers \
+# Enable single MPM (mpm_prefork for mod_php), Apache modules, and point DocumentRoot to /var/www/html/public
+RUN a2dismod -f mpm_event mpm_worker || true \
+    && rm -f /etc/apache2/mods-enabled/mpm_event.* /etc/apache2/mods-enabled/mpm_worker.* \
+    && a2enmod mpm_prefork rewrite expires headers \
     && sed -ri -e 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/*.conf \
     && sed -ri -e 's!/var/www/!/var/www/html/public!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf \
-    && sed -ri -e 's!AllowOverride None!AllowOverride All!g' /etc/apache2/apache2.conf
+    && sed -ri -e 's!AllowOverride None!AllowOverride All!g' /etc/apache2/apache2.conf \
+    && echo "ServerName localhost" > /etc/apache2/conf-available/servername.conf \
+    && a2enconf servername \
+    && apache2ctl -t
 
 # PHP runtime and OPcache tuning
 RUN { \
@@ -100,6 +105,7 @@ RUN { \
         echo 'php artisan optimize'; \
         echo 'php artisan filament:optimize'; \
         echo 'chown -R www-data:www-data storage bootstrap/cache'; \
+        echo 'rm -f /etc/apache2/mods-enabled/mpm_event.* /etc/apache2/mods-enabled/mpm_worker.*'; \
         echo 'exec apache2-foreground'; \
     } > /usr/local/bin/start-evitron.sh && chmod +x /usr/local/bin/start-evitron.sh
 
