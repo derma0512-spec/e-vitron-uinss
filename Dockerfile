@@ -99,7 +99,7 @@ RUN { \
         echo 'php artisan db:seed --class=SettingSeeder --force'; \
         echo 'php artisan db:seed --class=VideotronSeeder --force'; \
         echo 'if [ -n "$DEMO_ADMIN_EMAIL" ] && [ -n "$DEMO_ADMIN_PASSWORD" ]; then'; \
-        echo '  php -r '\''require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); App\Models\User::updateOrCreate(["email" => getenv("DEMO_ADMIN_EMAIL")], ["name" => "Admin PUSTIKOM E-VITRON", "password" => Illuminate\Support\Facades\Hash::make(getenv("DEMO_ADMIN_PASSWORD")), "role" => "admin", "identifier" => "ADM-001", "phone" => "081234567890", "unit_or_prodi" => "PUSTIKOM UINSSC", "auth_type" => "local", "account_status" => "approved"]);'\'''; \
+        echo '  php artisan db:seed --class=ExhibitionDemoSeeder --force'; \
         echo 'fi'; \
         echo 'php artisan optimize:clear'; \
         echo 'php artisan optimize'; \

@@ -293,4 +293,46 @@ class AuthTest extends TestCase
         $approvedLoginResponse->assertRedirect(route('home'));
         $this->assertAuthenticatedAs($user);
     }
+
+    public function test_demo_quick_login_is_hidden_by_default_and_works_when_enabled_with_exhibition_seeder(): void
+    {
+        config(['services.demo.quick_login' => false]);
+
+        $defaultLoginView = $this->get('/login');
+        $defaultLoginView->assertStatus(200);
+        $defaultLoginView->assertDontSee('Akses Cepat Demo');
+
+        config([
+            'services.demo.quick_login' => true,
+            'services.demo.admin_email' => 'admin.evitron@uinssc.ac.id',
+            'services.demo.admin_password' => 'UinsscDemo26',
+            'services.demo.applicant_email' => 'pemohon.demo@uinssc.ac.id',
+            'services.demo.applicant_password' => 'UinsscDemo26',
+        ]);
+
+        $demoLoginView = $this->get('/login');
+        $demoLoginView->assertStatus(200);
+        $demoLoginView->assertSee('Akses Cepat Demo');
+        $demoLoginView->assertSee('Pemohon Demo');
+        $demoLoginView->assertSee('Admin Kurator');
+
+        $this->artisan('db:seed', ['--class' => 'Database\\Seeders\\ExhibitionDemoSeeder', '--force' => true])
+            ->assertExitCode(0);
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'admin.evitron@uinssc.ac.id',
+            'role' => 'admin',
+        ]);
+        $this->assertDatabaseHas('users', [
+            'email' => 'pemohon.demo@uinssc.ac.id',
+            'role' => 'mahasiswa',
+        ]);
+        $this->assertSame(3, Submission::count());
+
+        $applicantLogin = $this->post('/login', [
+            'identifier' => 'pemohon.demo@uinssc.ac.id',
+            'password' => 'UinsscDemo26',
+        ]);
+        $applicantLogin->assertRedirect(route('home'));
+    }
 }

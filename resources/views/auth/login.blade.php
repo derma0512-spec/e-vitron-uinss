@@ -102,9 +102,15 @@
     x-data="{
         identifier: '{{ old('identifier', '') }}',
         password: '',
+        activeDemo: '',
         showPassword: false,
         showHelpModal: false,
         copiedEmail: false,
+        fillDemo(role, user, pass) {
+            this.identifier = user;
+            this.password = pass;
+            this.activeDemo = role;
+        },
         copyEmail() {
             const email = 'info@uinssc.ac.id';
             const done = () => { this.copiedEmail = true; setTimeout(() => { this.copiedEmail = false; }, 2500); };
@@ -372,6 +378,41 @@
                             </svg>
                         </button>
                     </form>
+
+                    @if(config('services.demo.quick_login'))
+                        <!-- Akses Cepat Demo Pameran (Hanya muncul saat saklar demo Railway aktif) -->
+                        <div class="mt-3.5 pt-3 border-t border-[#DCE7DF]/80" data-testid="demo-quick-login">
+                            <div class="flex items-center justify-between mb-2 px-0.5">
+                                <span class="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#0F3D2E]">
+                                    <svg class="w-3.5 h-3.5 text-[#D9A441]" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span>Akses Cepat Demo</span>
+                                </span>
+                                <span class="text-[10px] font-semibold text-[#647B71]">1-Klik Isi Otomatis</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button type="button"
+                                    @click="fillDemo('applicant', @js(config('services.demo.applicant_email')), @js(config('services.demo.applicant_password')))"
+                                    :class="activeDemo === 'applicant' ? 'bg-[#E8F3EC] border-[#0F3D2E] text-[#0F3D2E] ring-1 ring-[#0F3D2E]/15' : 'bg-[#FBFDFB] hover:bg-[#F5F8F5] border-[#DCE7DF] text-[#0F3D2E]'"
+                                    class="group flex items-center justify-center gap-1.5 h-[36px] px-2.5 rounded-[10px] border text-xs font-bold transition-all cursor-pointer select-none">
+                                    <svg class="w-3.5 h-3.5 text-[#0F3D2E] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                    <span class="truncate">Pemohon Demo</span>
+                                </button>
+                                <button type="button"
+                                    @click="fillDemo('admin', @js(config('services.demo.admin_email')), @js(config('services.demo.admin_password')))"
+                                    :class="activeDemo === 'admin' ? 'bg-[#E8F3EC] border-[#0F3D2E] text-[#0F3D2E] ring-1 ring-[#0F3D2E]/15' : 'bg-[#FBFDFB] hover:bg-[#F5F8F5] border-[#DCE7DF] text-[#0F3D2E]'"
+                                    class="group flex items-center justify-center gap-1.5 h-[36px] px-2.5 rounded-[10px] border text-xs font-bold transition-all cursor-pointer select-none">
+                                    <svg class="w-3.5 h-3.5 text-[#D9A441] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                    </svg>
+                                    <span class="truncate">Admin Kurator</span>
+                                </button>
+                            </div>
+                        </div>
+                    @endif
 
                     <!-- Navigasi Registrasi Tendik & Mitra Eksternal (Clean & Lega Tanpa Divider Menumpuk) -->
                     <div class="mt-4 text-center">
