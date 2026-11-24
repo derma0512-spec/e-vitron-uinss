@@ -5,9 +5,12 @@ namespace Tests\Feature;
 use App\Models\Submission;
 use App\Models\User;
 use App\Models\Videotron;
+use App\Notifications\AccountApprovalNotification;
 use App\Notifications\SubmissionStatusNotification;
 use App\Services\SubmissionDecisionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request as HttpClientRequest;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
@@ -192,5 +195,78 @@ class SubmissionEmailNotificationTest extends TestCase
         $this->assertSame($this->submission->ticket_code, $storedNotification->data['ticket_code']);
 
         Log::shouldHaveReceived('warning')->once();
+    }
+
+    /**
+     * Pastikan driver Brevo HTTPS API (port 443) mengirim payload email persetujuan akun
+     * yang valid dan menggunakan header api-key tanpa bergantung pada port SMTP.
+     */
+    public function test_brevo_https_transport_sends_account_approval_email_over_port_443(): void
+    {
+        config([
+            'mail.default' => 'brevo',
+            'mail.from.address' => 'evitron.uinssc@gmail.com',
+            'mail.from.name' => 'E-VITRON UIN SSC',
+            'services.brevo.api_key' => 'xkeysib-test-secret-key-12345',
+            'services.brevo.endpoint' => 'https://api.brevo.com/v3/smtp/email',
+            'services.brevo.timeout' => 8,
+        ]);
+        Mail::purge('brevo');
+
+        Http::fake([
+            'https://api.brevo.com/v3/smtp/email' => Http::response(['messageId' => '<msg-123@brevo>'], 201),
+        ]);
+
+        $this->user->notifyNow(new AccountApprovalNotification(
+            $this->user,
+            'approved',
+            'Akun mitra Anda sudah aktif.'
+        ));
+
+        Http::assertSent(function (HttpClientRequest $request): bool {
+            $payload = $request->data();
+
+            return $request->url() === 'https://api.brevo.com/v3/smtp/email'
+                && $request->hasHeader('api-key', 'xkeysib-test-secret-key-12345')
+                && ($payload['sender']['email'] ?? null) === 'evitron.uinssc@gmail.com'
+                && ($payload['sender']['name'] ?? null) === 'E-VITRON UIN SSC'
+                && ($payload['to'][0]['email'] ?? null) === 'ahmad.fauzi@mitra-uin.com'
+                && str_contains((string) ($payload['subject'] ?? ''), '[E-VITRON]')
+                && str_contains((string) ($payload['htmlContent'] ?? ''), 'Akun mitra Anda sudah aktif.');
+        });
+    }
+
+    /**
+     * Pastikan error dari Brevo API melempar TransportException yang aman
+     * tanpa membocorkan API Key ke dalam pesan error.
+     */
+    public function test_brevo_https_transport_redacts_api_key_when_api_fails(): void
+    {
+        $secretKey = 'xkeysib-super-secret-99999';
+
+        config([
+            'mail.default' => 'brevo',
+            'mail.from.address' => 'evitron.uinssc@gmail.com',
+            'mail.from.name' => 'E-VITRON UIN SSC',
+            'services.brevo.api_key' => $secretKey,
+            'services.brevo.endpoint' => 'https://api.brevo.com/v3/smtp/email',
+        ]);
+        Mail::purge('brevo');
+
+        Http::fake([
+            'https://api.brevo.com/v3/smtp/email' => Http::response([
+                'code' => 'unauthorized',
+                'message' => 'Key not found: '.$secretKey,
+            ], 401),
+        ]);
+
+        try {
+            $this->user->notifyNow(new AccountApprovalNotification($this->user, 'approved'));
+            $this->fail('TransportException seharusnya dilempar saat Brevo API mengembalikan 401.');
+        } catch (TransportException $e) {
+            $this->assertStringContainsString('HTTP 401', $e->getMessage());
+            $this->assertStringNotContainsString($secretKey, $e->getMessage());
+            $this->assertStringContainsString('[REDACTED]', $e->getMessage());
+        }
     }
 }

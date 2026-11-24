@@ -13,6 +13,7 @@ use Filament\Support\Enums\Alignment;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
 use Throwable;
 
@@ -163,8 +164,14 @@ class UserResource extends Resource
                                 'approved',
                                 ! empty($data['notes']) ? trim($data['notes']) : null
                             ));
-                        } catch (Throwable) {
+                        } catch (Throwable $e) {
                             $emailSent = false;
+                            Log::warning('Pengiriman email persetujuan akun gagal.', [
+                                'user_id' => $record->id,
+                                'email' => $record->email,
+                                'mailer' => config('mail.default'),
+                                'exception' => $e->getMessage(),
+                            ]);
                         }
 
                         Notification::make()
@@ -216,8 +223,13 @@ class UserResource extends Resource
                                 'rejected',
                                 ! empty($data['notes']) ? trim($data['notes']) : null
                             ));
-                        } catch (Throwable) {
-                            // Fail-safe
+                        } catch (Throwable $e) {
+                            Log::warning('Pengiriman email penolakan akun gagal.', [
+                                'user_id' => $record->id,
+                                'email' => $record->email,
+                                'mailer' => config('mail.default'),
+                                'exception' => $e->getMessage(),
+                            ]);
                         }
 
                         Notification::make()

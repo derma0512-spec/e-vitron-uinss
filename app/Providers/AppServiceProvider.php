@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Http\Responses\FilamentLogoutResponse;
+use App\Mail\Transport\BrevoApiTransport;
 use App\Models\Submission;
 use App\Observers\SubmissionObserver;
 use Carbon\Carbon;
@@ -13,6 +14,7 @@ use Filament\Support\Enums\VerticalAlignment;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -54,6 +56,16 @@ class AppServiceProvider extends ServiceProvider
             $identifier = (string) $request->input('identifier');
 
             return Limit::perMinute(5)->by($identifier ? $identifier.'|'.$request->ip() : $request->ip());
+        });
+
+        Mail::extend('brevo', function (array $config = []): BrevoApiTransport {
+            $brevoConfig = config('services.brevo', []);
+
+            return new BrevoApiTransport(
+                apiKey: (string) ($config['api_key'] ?? $brevoConfig['api_key'] ?? ''),
+                endpoint: (string) ($config['endpoint'] ?? $brevoConfig['endpoint'] ?? 'https://api.brevo.com/v3/smtp/email'),
+                timeout: (int) ($config['timeout'] ?? $brevoConfig['timeout'] ?? 8),
+            );
         });
     }
 }
