@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Videotron;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -409,5 +410,45 @@ class SubmissionWizardFlowTest extends TestCase
         ]);
 
         $this->assertEquals('disetujui', $submission->fresh()->status);
+    }
+
+    public function test_compact_seven_slot_pagination_prevents_long_page_lists_in_portal_and_admin(): void
+    {
+        // 1. Total 6 halaman -> semua nomor tampil tanpa elipsis
+        $sixPages = new LengthAwarePaginator(range(1, 9), 54, 9, 1, ['path' => '/pengajuan']);
+        $portalSixHtml = view('vendor.pagination.sipetron', ['paginator' => $sixPages])->render();
+        $this->assertStringContainsString('>1<', $portalSixHtml);
+        $this->assertStringContainsString('>6<', $portalSixHtml);
+        $this->assertStringNotContainsString('&hellip;', $portalSixHtml);
+
+        // 2. Total 10 halaman (di halaman 1) -> 1 2 3 4 5 ... 10 (tidak memanjang 6-9)
+        $tenPagesStart = new LengthAwarePaginator(range(1, 9), 90, 9, 1, ['path' => '/pengajuan']);
+        $portalTenStartHtml = view('vendor.pagination.sipetron', ['paginator' => $tenPagesStart])->render();
+        $this->assertStringContainsString('aria-current="page">1<', $portalTenStartHtml);
+        $this->assertStringContainsString('>5<', $portalTenStartHtml);
+        $this->assertStringContainsString('&hellip;', $portalTenStartHtml);
+        $this->assertStringContainsString('>10<', $portalTenStartHtml);
+        $this->assertStringNotContainsString('page=6"', $portalTenStartHtml);
+        $this->assertStringNotContainsString('page=9"', $portalTenStartHtml);
+
+        // 3. Total 10 halaman (di halaman 5) -> 1 ... 4 5 6 ... 10
+        $tenPagesMid = new LengthAwarePaginator(range(1, 9), 90, 9, 5, ['path' => '/pengajuan']);
+        $portalTenMidHtml = view('vendor.pagination.sipetron', ['paginator' => $tenPagesMid])->render();
+        $this->assertStringContainsString('aria-current="page">5<', $portalTenMidHtml);
+        $this->assertStringContainsString('page=4"', $portalTenMidHtml);
+        $this->assertStringContainsString('page=6"', $portalTenMidHtml);
+        $this->assertStringContainsString('page=10"', $portalTenMidHtml);
+        $this->assertStringNotContainsString('page=2"', $portalTenMidHtml);
+        $this->assertStringNotContainsString('page=8"', $portalTenMidHtml);
+        $this->assertSame(2, substr_count($portalTenMidHtml, '&hellip;'));
+
+        // 4. Livewire Admin pagination di 20 halaman (halaman 20) -> 1 ... 16 17 18 19 20
+        $twentyPagesEnd = new LengthAwarePaginator(range(1, 10), 200, 10, 20, ['path' => '/admin/submissions']);
+        $adminTwentyEndHtml = view('vendor.pagination.sipetron-livewire', ['paginator' => $twentyPagesEnd])->render();
+        $this->assertStringContainsString("gotoPage(1, 'page')", $adminTwentyEndHtml);
+        $this->assertStringContainsString('&hellip;', $adminTwentyEndHtml);
+        $this->assertStringContainsString("gotoPage(16, 'page')", $adminTwentyEndHtml);
+        $this->assertStringContainsString('>20<', $adminTwentyEndHtml);
+        $this->assertStringNotContainsString("gotoPage(10, 'page')", $adminTwentyEndHtml);
     }
 }

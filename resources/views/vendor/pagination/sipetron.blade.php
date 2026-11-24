@@ -66,47 +66,53 @@
             </div>
         </div>
 
-        {{-- Tombol Navigasi Halaman (Pill di Tengah pada Layar Mobile) --}}
+        {{-- Tombol Navigasi Halaman (Compact Fixed 7-Slot Window, Anti-Overflow Mobile) --}}
         @if ($paginator->hasPages())
-            <div class="inline-flex items-center gap-1 sm:gap-1.5 p-1 rounded-2xl bg-white/95 border border-[#0E4D3C]/15 shadow-2xs">
+            @php
+                $currentPage = (int) $paginator->currentPage();
+                $lastPage = (int) $paginator->lastPage();
+
+                if ($lastPage <= 7) {
+                    $compactPages = range(1, $lastPage);
+                } elseif ($currentPage <= 4) {
+                    $compactPages = [1, 2, 3, 4, 5, '...', $lastPage];
+                } elseif ($currentPage >= $lastPage - 3) {
+                    $compactPages = [1, '...', $lastPage - 4, $lastPage - 3, $lastPage - 2, $lastPage - 1, $lastPage];
+                } else {
+                    $compactPages = [1, '...', $currentPage - 1, $currentPage, $currentPage + 1, '...', $lastPage];
+                }
+            @endphp
+            <div class="inline-flex max-w-full items-center gap-0.5 sm:gap-1.5 p-1 rounded-2xl bg-white/95 border border-[#0E4D3C]/15 shadow-2xs">
                 {{-- Tombol Halaman Sebelumnya --}}
                 @if ($paginator->onFirstPage())
-                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl text-slate-300 cursor-not-allowed select-none" aria-disabled="true" aria-label="Sebelumnya">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                    <span class="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-xl text-slate-300 cursor-not-allowed select-none" aria-disabled="true" aria-label="Sebelumnya">
+                        <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                     </span>
                 @else
-                    <a href="{{ $paginator->previousPageUrl() }}" rel="prev" class="inline-flex items-center justify-center w-8 h-8 rounded-xl text-slate-600 hover:text-[#0E4D3C] hover:bg-[#EAF5F0] transition-colors cursor-pointer" aria-label="Sebelumnya">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                    <a href="{{ $paginator->previousPageUrl() }}" rel="prev" class="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-xl text-slate-600 hover:text-[#0E4D3C] hover:bg-[#EAF5F0] transition-colors cursor-pointer" aria-label="Sebelumnya">
+                        <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                     </a>
                 @endif
 
-                {{-- Elemen Nomor Halaman --}}
-                @foreach ($elements as $element)
-                    {{-- Pemisah Tiga Titik "..." --}}
-                    @if (is_string($element))
-                        <span class="inline-flex items-center justify-center w-8 h-8 text-xs font-semibold text-slate-400 select-none">{{ $element }}</span>
-                    @endif
-
-                    {{-- Array Tautan Nomor Halaman --}}
-                    @if (is_array($element))
-                        @foreach ($element as $page => $url)
-                            @if ($page == $paginator->currentPage())
-                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl text-xs font-bold bg-[#0E4D3C] text-white shadow-xs select-none" aria-current="page">{{ $page }}</span>
-                            @else
-                                <a href="{{ $url }}" class="inline-flex items-center justify-center w-8 h-8 rounded-xl text-xs font-semibold text-slate-700 hover:text-[#0E4D3C] hover:bg-[#EAF5F0] transition-colors cursor-pointer">{{ $page }}</a>
-                            @endif
-                        @endforeach
+                {{-- Elemen Nomor Halaman (Maksimal 7 Slot Stabil) --}}
+                @foreach ($compactPages as $item)
+                    @if ($item === '...')
+                        <span class="inline-flex items-center justify-center min-w-[24px] h-7 sm:min-w-[28px] sm:h-8 text-xs font-semibold text-slate-400 select-none" aria-hidden="true">&hellip;</span>
+                    @elseif ($item === $currentPage)
+                        <span class="inline-flex items-center justify-center min-w-[28px] h-7 px-1.5 sm:min-w-[32px] sm:h-8 sm:px-2 rounded-xl text-xs font-bold bg-[#0E4D3C] text-white shadow-xs select-none" aria-current="page">{{ $item }}</span>
+                    @else
+                        <a href="{{ $paginator->url($item) }}" class="inline-flex items-center justify-center min-w-[28px] h-7 px-1.5 sm:min-w-[32px] sm:h-8 sm:px-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-[#0E4D3C] hover:bg-[#EAF5F0] transition-colors cursor-pointer">{{ $item }}</a>
                     @endif
                 @endforeach
 
                 {{-- Tombol Halaman Berikutnya --}}
                 @if ($paginator->hasMorePages())
-                    <a href="{{ $paginator->nextPageUrl() }}" rel="next" class="inline-flex items-center justify-center w-8 h-8 rounded-xl text-slate-600 hover:text-[#0E4D3C] hover:bg-[#EAF5F0] transition-colors cursor-pointer" aria-label="Berikutnya">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    <a href="{{ $paginator->nextPageUrl() }}" rel="next" class="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-xl text-slate-600 hover:text-[#0E4D3C] hover:bg-[#EAF5F0] transition-colors cursor-pointer" aria-label="Berikutnya">
+                        <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                     </a>
                 @else
-                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl text-slate-300 cursor-not-allowed select-none" aria-disabled="true" aria-label="Berikutnya">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    <span class="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-xl text-slate-300 cursor-not-allowed select-none" aria-disabled="true" aria-label="Berikutnya">
+                        <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                     </span>
                 @endif
             </div>

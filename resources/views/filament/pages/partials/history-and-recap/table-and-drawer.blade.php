@@ -271,7 +271,7 @@
 
                 {{-- Pagination Links --}}
                 <div class="sipetron-pagination-wrap">
-                    {{ $submissions->links() }}
+                    {{ $submissions->links('vendor.pagination.sipetron-livewire') }}
                 </div>
             </div>
         </div>

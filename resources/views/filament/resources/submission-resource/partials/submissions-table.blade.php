@@ -283,9 +283,9 @@
                     @endif
                 </div>
 
-                {{-- Pagination Links (Wrapped with clean styles, no English duplicate text) --}}
+                {{-- Pagination Links (Compact Fixed 7-Slot Window) --}}
                 <div class="sipetron-pagination-wrap">
-                    {{ $submissions->links() }}
+                    {{ $submissions->links('vendor.pagination.sipetron-livewire') }}
                 </div>
             </div>
         </div>
