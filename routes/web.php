@@ -32,7 +32,7 @@ Route::middleware(['auth', EnsureApplicantRole::class, PreventBackHistory::class
     Route::get('/', [SubmissionController::class, 'index'])->name('index');
     Route::get('/baru', [SubmissionController::class, 'create'])->name('create');
     Route::post('/simpan', [SubmissionController::class, 'store'])->name('store')->middleware('throttle:10,1');
-    Route::get('/{ticket_code}/cetak', [SubmissionController::class, 'printProof'])->name('print');
+    Route::get('/{ticket_code}/cetak', [SubmissionController::class, 'printProof'])->name('print')->middleware('throttle:20,1');
     Route::get('/{ticket_code}', [SubmissionController::class, 'show'])->name('show');
     Route::post('/{ticket_code}/batal', [SubmissionController::class, 'cancel'])->name('cancel');
     Route::post('/{ticket_code}/revisi', [SubmissionController::class, 'submitRevision'])->name('revision')->middleware('throttle:10,1');
@@ -40,7 +40,7 @@ Route::middleware(['auth', EnsureApplicantRole::class, PreventBackHistory::class
 
 // Rute Notifikasi Pengaju
 Route::middleware(['auth', EnsureApplicantRole::class, PreventBackHistory::class])->prefix('notifikasi')->name('notifikasi.')->group(function () {
-    Route::get('/cek-terbaru', [NotificationController::class, 'checkUnread'])->name('checkUnread');
+    Route::get('/cek-terbaru', [NotificationController::class, 'checkUnread'])->name('checkUnread')->middleware('throttle:60,1');
     Route::get('/', [NotificationController::class, 'index'])->name('index');
     Route::get('/{id}/buka', [NotificationController::class, 'readAndRedirect'])->name('read');
     Route::post('/{id}/tandai', [NotificationController::class, 'markAsRead'])->name('markAsRead');
@@ -58,8 +58,8 @@ Route::middleware(['auth', EnsureAdminRole::class, PreventBackHistory::class])->
 
     Route::post('/change-password', [AuthController::class, 'changePassword'])->name('admin.change-password');
     Route::get('/history-and-recap/print', [RecapPrintController::class, 'print'])->name('admin.history-and-recap.print');
-    Route::get('/history-and-recap/export-pdf', [RecapPrintController::class, 'exportPdf'])->name('admin.history-and-recap.export-pdf');
-    Route::get('/submissions/{id}/print-pdf', [RecapPrintController::class, 'printSinglePdf'])->name('admin.submissions.print-pdf');
+    Route::get('/history-and-recap/export-pdf', [RecapPrintController::class, 'exportPdf'])->name('admin.history-and-recap.export-pdf')->middleware('throttle:20,1');
+    Route::get('/submissions/{id}/print-pdf', [RecapPrintController::class, 'printSinglePdf'])->name('admin.submissions.print-pdf')->middleware('throttle:20,1');
     Route::get('/schedule-preparation', function () {
         return redirect('/admin/submissions?statusFilter=disetujui');
     });

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\SafePdfContent;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -67,7 +68,14 @@ class StoreSubmissionRequest extends FormRequest
                 'regex:/^https?:\/\/(drive|docs)\.google\.com\/[^\s]+$/i',
             ],
             'video_duration_seconds' => "nullable|required_if:content_type,video|integer|min:5|max:{$maxVideoDuration}",
-            'surat_peminjaman' => 'required|file|mimes:pdf|extensions:pdf|max:2048',
+            'surat_peminjaman' => [
+                'required',
+                'file',
+                'mimes:pdf',
+                'extensions:pdf',
+                'max:2048',
+                new SafePdfContent,
+            ],
         ];
     }
 

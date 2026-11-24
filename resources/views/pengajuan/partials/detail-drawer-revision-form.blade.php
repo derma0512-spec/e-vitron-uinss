@@ -15,7 +15,7 @@
                     <div class="mt-2.5 pt-2 border-t border-amber-200/60 flex items-center gap-1.5 text-[11px] text-amber-900/75 flex-wrap">
                         <span>Ada kesalahan data atau agenda dibatalkan?</span>
                         <button type="button"
-                                @click="confirmCancel('{{ $submission->ticket_code }}', '{{ addslashes($submission->title) }}', $el)"
+                                @click="confirmCancel(@js($submission->ticket_code), @js($submission->title), $el)"
                                 class="inline-flex items-center gap-0.5 font-bold text-rose-600 hover:text-rose-700 underline underline-offset-2 hover:translate-x-0.5 active:scale-95 transition-all duration-150 cursor-pointer select-none">
                             <span>Batalkan pengajuan ini</span>
                             <svg class="w-3 h-3 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
@@ -110,14 +110,14 @@
                   method="POST"
                   enctype="multipart/form-data"
                   x-data="{
-                      originalGdrive: '{{ $submission->gdrive_link }}',
-                      currentGdrive: '{{ $submission->gdrive_link }}',
+                      originalGdrive: @js($submission->gdrive_link ?? ''),
+                      currentGdrive: @js($submission->gdrive_link ?? ''),
                       fileName: '',
                       fileSize: '',
                       isDragging: false,
                       fileError: '',
                       validateSubmit(e) {
-                          if ('{{ $revType }}' === 'surat' && !this.fileName) {
+                          if (@js($revType) === 'surat' && !this.fileName) {
                               e.preventDefault();
                               this.fileError = 'Wajib memilih berkas Surat Permohonan baru (PDF).';
                               return false;

@@ -9,6 +9,7 @@ use App\Filament\Widgets\SubmissionTrendChartWidget;
 use App\Filament\Widgets\UpcomingBroadcastsWidget;
 use App\Filament\Widgets\VideotronUsageChartWidget;
 use App\Http\Middleware\FilamentAuthenticate;
+use App\Http\Middleware\SecurityHeaders;
 use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -93,6 +94,7 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+                SecurityHeaders::class,
             ])
             ->authMiddleware([
                 FilamentAuthenticate::class,

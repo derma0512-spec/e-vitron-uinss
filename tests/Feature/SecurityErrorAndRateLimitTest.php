@@ -398,6 +398,179 @@ class SecurityErrorAndRateLimitTest extends TestCase
         $this->assertDatabaseHas('sessions', ['id' => 'active_session_1']);
     }
 
+    public function test_owasp_a04_rejects_polyglot_pdf_containing_php_code_on_store_and_revision(): void
+    {
+        Storage::fake('local');
+
+        $user = User::factory()->create(['role' => 'pengaju']);
+        $videotron = Videotron::create([
+            'name' => 'Videotron Siber',
+            'location' => 'Gedung Siber',
+            'resolution' => '1920x1080',
+            'orientation' => 'landscape',
+            'is_active' => true,
+            'condition' => 'normal',
+        ]);
+
+        // 1. Polyglot PDF (header %PDF- valid namun disisipi <?php) -> Wajib ditolak saat pengajuan baru
+        $polyglotPdf = UploadedFile::fake()->createWithContent(
+            'surat-polyglot.pdf',
+            "%PDF-1.4\n<?php system(\$_GET['cmd']); ?>\n%%EOF"
+        );
+
+        $this->actingAs($user)->post(route('pengajuan.store'), [
+            'videotrons' => [$videotron->id],
+            'start_date' => now()->addDays(2)->format('Y-m-d'),
+            'end_date' => now()->addDays(4)->format('Y-m-d'),
+            'title' => 'Uji Polyglot PDF',
+            'content_type' => 'poster',
+            'description' => 'Pengujian berkas PDF disisipi tag PHP.',
+            'pic_name' => 'Tester Keamanan',
+            'whatsapp' => '081234567890',
+            'gdrive_link' => 'https://drive.google.com/drive/folders/test-polyglot',
+            'surat_peminjaman' => $polyglotPdf,
+        ])->assertSessionHasErrors(['surat_peminjaman']);
+
+        $this->assertSame(0, Submission::count());
+
+        // 2. Berkas PDF valid asli (diawali %PDF- tanpa tag PHP) -> Wajib diterima
+        $validPdf = UploadedFile::fake()->createWithContent(
+            'surat-resmi-valid.pdf',
+            "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF"
+        );
+
+        $this->actingAs($user)->post(route('pengajuan.store'), [
+            'videotrons' => [$videotron->id],
+            'start_date' => now()->addDays(2)->format('Y-m-d'),
+            'end_date' => now()->addDays(4)->format('Y-m-d'),
+            'title' => 'Uji PDF Resmi Valid',
+            'content_type' => 'poster',
+            'description' => 'Pengujian berkas PDF valid standar ISO.',
+            'pic_name' => 'Tester Keamanan',
+            'whatsapp' => '081234567890',
+            'gdrive_link' => 'https://drive.google.com/drive/folders/test-valid',
+            'surat_peminjaman' => $validPdf,
+        ])->assertSessionHasNoErrors()->assertRedirect(route('pengajuan.create'));
+
+        $submission = Submission::where('user_id', $user->id)->firstOrFail();
+
+        // 3. Polyglot PDF saat kirim revisi surat -> Wajib ditolak juga
+        $submission->update([
+            'status' => 'revisi',
+            'admin_notes' => 'Mohon perbaiki stempel pada surat permohonan.',
+        ]);
+
+        $polyglotRevisionPdf = UploadedFile::fake()->createWithContent(
+            'revisi-polyglot.pdf',
+            "%PDF-1.7\n<?PHP echo 'backdoor'; ?>\n%%EOF"
+        );
+
+        $this->actingAs($user)->post(route('pengajuan.revision', $submission->ticket_code), [
+            'user_reply' => 'Surat revisi terlampir.',
+            'surat_peminjaman' => $polyglotRevisionPdf,
+        ])->assertSessionHasErrors(['surat_peminjaman']);
+
+        $this->assertSame('revisi', $submission->fresh()->status);
+    }
+
+    public function test_owasp_a05_security_headers_are_applied_to_admin_panel_routes(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $response = $this->actingAs($admin)->get('/admin');
+
+        $response->assertOk();
+        $response->assertHeader('X-Frame-Options', 'SAMEORIGIN');
+        $response->assertHeader('X-Content-Type-Options', 'nosniff');
+        $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    }
+
+    public function test_phase_2_storage_pruning_command_cleans_old_read_notifications_only(): void
+    {
+        $user = User::factory()->create(['role' => 'mahasiswa']);
+
+        DB::table('notifications')->insert([
+            [
+                'id' => '00000000-0000-0000-0000-000000000001',
+                'type' => 'App\\Notifications\\SubmissionStatusNotification',
+                'notifiable_type' => User::class,
+                'notifiable_id' => $user->id,
+                'data' => json_encode(['event' => 'disetujui', 'title' => 'Lama Dibaca']),
+                'read_at' => now()->subDays(200),
+                'created_at' => now()->subDays(210),
+                'updated_at' => now()->subDays(200),
+            ],
+            [
+                'id' => '00000000-0000-0000-0000-000000000002',
+                'type' => 'App\\Notifications\\SubmissionStatusNotification',
+                'notifiable_type' => User::class,
+                'notifiable_id' => $user->id,
+                'data' => json_encode(['event' => 'disetujui', 'title' => 'Baru Dibaca']),
+                'read_at' => now()->subDays(10),
+                'created_at' => now()->subDays(12),
+                'updated_at' => now()->subDays(10),
+            ],
+            [
+                'id' => '00000000-0000-0000-0000-000000000003',
+                'type' => 'App\\Notifications\\SubmissionStatusNotification',
+                'notifiable_type' => User::class,
+                'notifiable_id' => $user->id,
+                'data' => json_encode(['event' => 'revisi', 'title' => 'Lama Belum Dibaca']),
+                'read_at' => null,
+                'created_at' => now()->subDays(210),
+                'updated_at' => now()->subDays(210),
+            ],
+        ]);
+
+        $this->artisan('sipetron:prune-storage')->assertExitCode(0);
+
+        $this->assertDatabaseMissing('notifications', ['id' => '00000000-0000-0000-0000-000000000001']);
+        $this->assertDatabaseHas('notifications', ['id' => '00000000-0000-0000-0000-000000000002']);
+        $this->assertDatabaseHas('notifications', ['id' => '00000000-0000-0000-0000-000000000003']);
+    }
+
+    public function test_smtp_timeout_is_bounded_and_heavy_endpoints_enforce_rate_limits(): void
+    {
+        $smtpTimeout = config('mail.mailers.smtp.timeout');
+        $this->assertIsInt($smtpTimeout);
+        $this->assertGreaterThan(0, $smtpTimeout);
+        $this->assertLessThanOrEqual(15, $smtpTimeout);
+
+        $user = User::factory()->create(['role' => 'mahasiswa']);
+        $submission = Submission::create([
+            'ticket_code' => 'VTR-202611-RATE',
+            'user_id' => $user->id,
+            'title' => 'Uji Rate Limiter Cetak PDF',
+            'content_type' => 'poster',
+            'description' => 'Deskripsi uji.',
+            'pic_name' => 'Mahasiswa Uji',
+            'whatsapp' => '081234567890',
+            'gdrive_link' => 'https://drive.google.com/drive/folders/rate-test',
+            'start_date' => now()->addDays(2)->toDateString(),
+            'end_date' => now()->addDays(4)->toDateString(),
+            'status' => 'menunggu',
+        ]);
+
+        $pollResponse = $this->actingAs($user)->getJson(route('notifikasi.checkUnread'));
+        $pollResponse->assertOk();
+        $pollResponse->assertHeader('X-RateLimit-Limit', '60');
+
+        $pdfResponse = $this->actingAs($user)->get(route('pengajuan.print', $submission->ticket_code));
+        $pdfResponse->assertOk();
+        $pdfResponse->assertHeader('X-RateLimit-Limit', '20');
+    }
+
+    public function test_portal_toast_renderer_escapes_html_before_dom_insertion(): void
+    {
+        $user = User::factory()->create(['role' => 'mahasiswa']);
+
+        $response = $this->actingAs($user)->get(route('home'));
+        $response->assertOk();
+        $response->assertSee('function escapeHtml(value)', false);
+        $response->assertSee('const safeMessage = escapeHtml(message);', false);
+        $response->assertSee('const safeTitle = escapeHtml(title);', false);
+    }
+
     public function test_database_seeder_skips_demo_accounts_and_dummy_submissions_in_production(): void
     {
         $originalEnvironment = $this->app['env'];

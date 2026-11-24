@@ -56,6 +56,15 @@
         window.sipetronToast = function (opts) {
           opts = opts || {};
 
+          function escapeHtml(value) {
+            return String(value == null ? '' : value)
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#39;');
+          }
+
           // Jika sidebar mobile sedang terbuka, tunda kemunculan toast sampai sidebar ditutup
           if (window._isMobileNavOpen()) {
             window._pendingToastQueue.push(opts);
@@ -68,9 +77,12 @@
           const title = opts.title || (opts.type === 'error' ? 'Terjadi Kesalahan' : 'Berhasil');
           const message = opts.message || '';
           const ticketCode = opts.ticketCode || '';
+          const safeTitle = escapeHtml(title);
+          const safeMessage = escapeHtml(message);
+          const safeTicketCode = escapeHtml(ticketCode);
           const isError = opts.type === 'error';
           const duration = opts.duration || 3200;
-          const url = opts.url || '';
+          const url = typeof opts.url === 'string' && !/^\s*javascript:/i.test(opts.url) ? opts.url : '';
           const hasAction = (typeof opts.onClick === 'function') || Boolean(url);
 
           const item = document.createElement('div');
@@ -81,14 +93,14 @@
             : '<svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
 
           let metaHtml = '';
-          if (ticketCode || message) {
+          if (safeTicketCode || safeMessage) {
             metaHtml = '<div class="sipetron-toast-meta">';
-            if (ticketCode) {
-              metaHtml += '<span class="sipetron-toast-ticket">' + ticketCode + '</span>';
-              if (message) metaHtml += '<span class="sipetron-toast-dot" aria-hidden="true">·</span>';
+            if (safeTicketCode) {
+              metaHtml += '<span class="sipetron-toast-ticket">' + safeTicketCode + '</span>';
+              if (safeMessage) metaHtml += '<span class="sipetron-toast-dot" aria-hidden="true">·</span>';
             }
-            if (message) {
-              metaHtml += '<span class="sipetron-toast-desc" title="' + message + '">' + message + '</span>';
+            if (safeMessage) {
+              metaHtml += '<span class="sipetron-toast-desc" title="' + safeMessage + '">' + safeMessage + '</span>';
             }
             metaHtml += '</div>';
           }
@@ -99,7 +111,7 @@
                 ${iconSvg}
               </div>
               <div class="sipetron-toast-content">
-                <h4 class="sipetron-toast-title">${title}</h4>
+                <h4 class="sipetron-toast-title">${safeTitle}</h4>
                 ${metaHtml}
               </div>
               <button type="button" class="sipetron-toast-close-btn" title="Tutup notifikasi" aria-label="Tutup notifikasi">

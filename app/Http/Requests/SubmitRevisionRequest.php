@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Submission;
+use App\Rules\SafePdfContent;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -84,6 +85,7 @@ class SubmitRevisionRequest extends FormRequest
                 'mimes:pdf',
                 'extensions:pdf',
                 'max:2048',
+                new SafePdfContent,
             ];
         }
 
