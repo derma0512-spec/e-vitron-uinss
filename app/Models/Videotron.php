@@ -6,6 +6,7 @@ use App\Notifications\VideotronConditionNotification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class Videotron extends Model
@@ -121,15 +122,47 @@ class Videotron extends Model
         return '06.00 – 22.00 WIB';
     }
 
-    public function getImageUrlAttribute(): string
+    /**
+     * Memeriksa apakah perangkat memiliki foto unggahan khusus yang berkas fisiknya tersedia di disk publik.
+     */
+    public function hasCustomImage(): bool
     {
-        if (! empty($this->image)) {
-            return asset('storage/'.$this->image);
+        return ! empty($this->image) && Storage::disk('public')->exists($this->image);
+    }
+
+    /**
+     * Menentukan path aset foto permanen bawaan untuk masing-masing titik videotron kampus.
+     */
+    public function getDefaultImagePath(): string
+    {
+        $name = strtolower((string) $this->name);
+        $campusPhotos = [
+            'masjid' => 'images/videotrons/masjid.webp',
+            'rektorat' => 'images/videotrons/rektorat.webp',
+            'syariah' => 'images/videotrons/syariah.webp',
+            'fitk' => 'images/videotrons/fitk.webp',
+            'siber' => 'images/videotrons/siber.webp',
+            'febi' => 'images/videotrons/febi.webp',
+        ];
+
+        foreach ($campusPhotos as $keyword => $relativePath) {
+            if (str_contains($name, $keyword) && is_file(public_path($relativePath))) {
+                return $relativePath;
+            }
         }
 
         return $this->orientation === 'portrait'
-            ? asset('images/hero_banner.jpg')
-            : asset('images/campus-videotron.png');
+            ? 'images/hero_banner.jpg'
+            : 'images/campus-videotron.png';
+    }
+
+    public function getImageUrlAttribute(): string
+    {
+        if ($this->hasCustomImage()) {
+            return asset('storage/'.$this->image);
+        }
+
+        return asset($this->getDefaultImagePath());
     }
 
     public function submissions(): BelongsToMany

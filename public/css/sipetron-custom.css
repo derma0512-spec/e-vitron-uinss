@@ -4255,10 +4255,9 @@
         color: #FFFFFF !important;
     }
 
-    /* 2. Dropzone FileUpload: 110px, border-dashed 1.5px #CBD5E1, latar #F8FAF9, hover #0F3D2E / #F0F7F3, ikon di atas */
+    /* 2. Dropzone FileUpload: min 110px saat kosong, otomatis melebar proporsional saat ada pratinjau foto */
     .modal-ubah-data-videotron .filepond--root {
         min-height: 110px !important;
-        height: 110px !important;
         border-radius: 12px !important;
         border: 1.5px dashed #CBD5E1 !important;
         background-color: #F8FAF9 !important;
@@ -4268,7 +4267,16 @@
         cursor: pointer !important;
         transition: none !important;
     }
-    .modal-ubah-data-videotron .filepond--root:hover,
+    .modal-ubah-data-videotron .filepond--root:has(.filepond--item) {
+        border: 1.5px solid #CBD5E1 !important;
+        background-color: #F8FAF9 !important;
+        cursor: default !important;
+    }
+    .modal-ubah-data-videotron .filepond--root:has(.filepond--item):hover {
+        border-color: #94A3B8 !important;
+        background-color: #F8FAF9 !important;
+    }
+    .modal-ubah-data-videotron .filepond--root:not(:has(.filepond--item)):hover,
     .modal-ubah-data-videotron .filepond--root[data-hover="true"],
     .modal-ubah-data-videotron .filepond--root[data-drop-active="true"] {
         border-color: #0F3D2E !important;

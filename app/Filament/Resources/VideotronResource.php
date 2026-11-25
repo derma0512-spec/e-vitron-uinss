@@ -79,6 +79,7 @@ class VideotronResource extends Resource
                             ->directory('videotrons')
                             ->disk('public')
                             ->maxSize(5120)
+                            ->imagePreviewHeight('220')
                             ->imageEditor()
                             ->placeholder(new HtmlString('Tarik & lepas file ke sini atau <span class="filepond--label-action">Telusuri</span>'))
                             ->helperText(function (?Videotron $record): HtmlString {
@@ -88,12 +89,24 @@ class VideotronResource extends Resource
                                     return new HtmlString($hint);
                                 }
 
+                                if ($record->hasCustomImage()) {
+                                    return new HtmlString(
+                                        $hint
+                                        .'<div style="font-size: 12px; color: #065F46; background-color: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 10px; padding: 10px 12px; margin-top: 10px; line-height: 1.45;">'
+                                        .'<strong>Foto unggahan khusus aktif</strong> pada pratinjau di atas. Klik ikon <strong>✕</strong> pada pratinjau jika ingin menghapusnya dan kembali memakai foto resmi kampus.'
+                                        .'</div>'
+                                    );
+                                }
+
                                 $url = e($record->image_url);
-                                $isCustom = ! empty($record->image);
-                                $sourceText = $isCustom ? 'Foto Khusus' : 'Foto Default Sistem';
-                                $badgeBg = $isCustom ? '#ECFDF5' : '#F1F5F9';
-                                $badgeColor = $isCustom ? '#065F46' : '#475569';
-                                $badgeBorder = $isCustom ? '#A7F3D0' : '#CBD5E1';
+                                $isCampusAsset = str_starts_with($record->getDefaultImagePath(), 'images/videotrons/');
+                                $sourceText = $isCampusAsset ? 'Foto Resmi Kampus' : 'Foto Default Sistem';
+                                $badgeBg = $isCampusAsset ? '#ECFDF5' : '#F1F5F9';
+                                $badgeColor = $isCampusAsset ? '#065F46' : '#475569';
+                                $badgeBorder = $isCampusAsset ? '#A7F3D0' : '#CBD5E1';
+                                $caption = $isCampusAsset
+                                    ? 'Tersimpan permanen di sistem (format WebP). Unggah file baru di atas hanya jika ingin menggantinya dengan foto lain.'
+                                    : 'Unggah file baru di atas jika ingin mengganti foto dokumentasi fisik perangkat ini.';
 
                                 return new HtmlString('
                                     '.$hint.'
@@ -106,7 +119,7 @@ class VideotronResource extends Resource
                                                 <span style="font-size: 13px; font-weight: 700; color: #1E293B;">Foto Aktif Saat Ini</span>
                                                 <span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 9999px; background-color: '.$badgeBg.'; color: '.$badgeColor.'; border: 1px solid '.$badgeBorder.';">'.$sourceText.'</span>
                                             </div>
-                                            <span style="font-size: 12px; color: #64748B; line-height: 1.4;">Unggah file baru di atas jika ingin mengganti foto dokumentasi fisik perangkat ini.</span>
+                                            <span style="font-size: 12px; color: #64748B; line-height: 1.4;">'.$caption.'</span>
                                         </div>
                                     </div>
                                 ');
@@ -135,9 +148,8 @@ class VideotronResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('image')
                     ->label('Foto')
-                    ->disk('public')
+                    ->getStateUsing(fn (Videotron $record): string => $record->image_url)
                     ->circular()
-                    ->defaultImageUrl(fn (Videotron $record): string => $record->image_url)
                     ->width(44)
                     ->height(44)
                     ->alignLeft(),
@@ -446,6 +458,13 @@ class VideotronResource extends Resource
                     ->size('xs')
                     ->color('gray')
                     ->slideOver()
+                    ->mutateRecordDataUsing(function (array $data, Videotron $record): array {
+                        if (! $record->hasCustomImage()) {
+                            $data['image'] = null;
+                        }
+
+                        return $data;
+                    })
                     ->modalIcon('heroicon-o-pencil-square')
                     ->modalIconColor('primary')
                     ->modalAlignment(Alignment::Left)
