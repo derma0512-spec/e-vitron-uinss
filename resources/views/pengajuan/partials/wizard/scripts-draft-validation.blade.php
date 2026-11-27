@@ -211,9 +211,20 @@
                             if (draft.form && typeof draft.form === 'object') {
                                 if (draft.form.title !== undefined) this.form.title = draft.form.title;
                                 if (draft.form.contentType !== undefined) this.form.contentType = draft.form.contentType;
-                                if (draft.form.durationUnit !== undefined) this.form.durationUnit = draft.form.durationUnit;
-                                if (draft.form.durationValue !== undefined) this.form.durationValue = draft.form.durationValue;
-                                if (draft.form.videoDurationSeconds !== undefined) this.form.videoDurationSeconds = draft.form.videoDurationSeconds;
+                                if (draft.form.durationUnit !== undefined) {
+                                    this.form.durationUnit = (this.maxVideoDurationSeconds < 60 && draft.form.durationUnit === 'menit')
+                                        ? 'detik'
+                                        : draft.form.durationUnit;
+                                }
+                                if (draft.form.videoDurationSeconds !== undefined) {
+                                    const clampedSec = Math.min(this.maxVideoDurationSeconds, Math.max(5, parseInt(draft.form.videoDurationSeconds, 10) || this.maxVideoDurationSeconds));
+                                    this.form.videoDurationSeconds = clampedSec;
+                                    this.form.durationValue = this.form.durationUnit === 'menit'
+                                        ? Math.round((clampedSec / 60) * 100) / 100
+                                        : clampedSec;
+                                } else if (draft.form.durationValue !== undefined) {
+                                    this.form.durationValue = draft.form.durationValue;
+                                }
                                 if (draft.form.gdriveLink !== undefined) this.form.gdriveLink = draft.form.gdriveLink;
                                 if (draft.form.picName !== undefined) this.form.picName = draft.form.picName;
                                 if (draft.form.whatsapp !== undefined) this.form.whatsapp = draft.form.whatsapp;
@@ -359,18 +370,26 @@
                 this.goToStep(3);
             },
 
+            formatMaxMinutesLabel() {
+                const mins = this.maxVideoDurationMinutes;
+                return Number.isInteger(mins) ? String(mins) : String(Number(mins.toFixed(2)));
+            },
+
             setDurationUnit(unit) {
+                if (unit === 'menit' && this.maxVideoDurationSeconds < 60) return;
                 if (this.form.durationUnit === unit) return;
                 this.form.durationUnit = unit;
                 if (unit === 'detik') {
                     const sec = Math.round(parseFloat(this.form.durationValue || 0) * 60);
-                    this.form.durationValue = sec > 0 ? Math.min(180, Math.max(5, sec)) : 30;
+                    this.form.durationValue = sec > 0
+                        ? Math.min(this.maxVideoDurationSeconds, Math.max(5, sec))
+                        : Math.min(this.maxVideoDurationSeconds, 30);
                     this.form.videoDurationSeconds = this.form.durationValue;
                 } else {
-                    const sec = parseInt(this.form.durationValue, 10) || parseInt(this.form.videoDurationSeconds, 10) || 30;
+                    const sec = parseInt(this.form.durationValue, 10) || parseInt(this.form.videoDurationSeconds, 10) || Math.min(this.maxVideoDurationSeconds, 60);
                     const min = Math.round((sec / 60) * 100) / 100;
-                    this.form.durationValue = Math.min(3, Math.max(0.25, min));
-                    this.form.videoDurationSeconds = Math.round(this.form.durationValue * 60);
+                    this.form.durationValue = Math.min(this.maxVideoDurationMinutes, Math.max(0.25, min));
+                    this.form.videoDurationSeconds = Math.min(this.maxVideoDurationSeconds, Math.round(this.form.durationValue * 60));
                 }
                 delete this.formErrors.videoDuration;
             },
@@ -386,7 +405,7 @@
                 } else {
                     this.form.videoDurationSeconds = Math.round(val);
                 }
-                if (this.form.videoDurationSeconds >= 5 && this.form.videoDurationSeconds <= 180) {
+                if (this.form.videoDurationSeconds >= 5 && this.form.videoDurationSeconds <= this.maxVideoDurationSeconds) {
                     delete this.formErrors.videoDuration;
                 }
             },
@@ -494,8 +513,8 @@
 
                 if (this.form.contentType === 'video') {
                     const sec = parseInt(this.form.videoDurationSeconds, 10);
-                    if (isNaN(sec) || sec < 5 || sec > 180) {
-                        this.formErrors.videoDuration = 'Durasi video maksimal 3 menit (antara 5 s/d 180 detik).';
+                    if (isNaN(sec) || sec < 5 || sec > this.maxVideoDurationSeconds) {
+                        this.formErrors.videoDuration = `Durasi video harus antara 5 detik hingga ${this.maxVideoDurationLabel}.`;
                         valid = false;
                     }
                 }

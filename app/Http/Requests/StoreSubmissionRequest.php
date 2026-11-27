@@ -36,6 +36,35 @@ class StoreSubmissionRequest extends FormRequest
     }
 
     /**
+     * Mengambil batas maksimal durasi video (detik) dari Pengaturan Sistem dalam rentang aman 5-300 detik.
+     */
+    public static function resolveMaxVideoDuration(): int
+    {
+        $maxVideoDuration = (int) setting('max_video_duration', 30);
+
+        return ($maxVideoDuration >= 5 && $maxVideoDuration <= 300)
+            ? $maxVideoDuration
+            : 30;
+    }
+
+    /**
+     * Memformat durasi detik menjadi label ramah pengguna (misal: "30 detik" atau "3 menit (180 detik)").
+     */
+    public static function formatVideoDurationLabel(int $seconds): string
+    {
+        if ($seconds >= 60) {
+            $minutes = $seconds / 60;
+            $minutesText = ($seconds % 60 === 0)
+                ? (string) (int) $minutes
+                : rtrim(rtrim(number_format($minutes, 2, '.', ''), '0'), '.');
+
+            return "{$minutesText} menit ({$seconds} detik)";
+        }
+
+        return "{$seconds} detik";
+    }
+
+    /**
      * Aturan validasi pengiriman pengajuan baru.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
@@ -46,10 +75,7 @@ class StoreSubmissionRequest extends FormRequest
             return [];
         }
 
-        $maxVideoDuration = (int) setting('max_video_duration', 180);
-        if ($maxVideoDuration < 5 || $maxVideoDuration > 180) {
-            $maxVideoDuration = 180;
-        }
+        $maxVideoDuration = self::resolveMaxVideoDuration();
 
         return [
             'videotrons' => 'required|array|min:1',
@@ -86,6 +112,8 @@ class StoreSubmissionRequest extends FormRequest
      */
     public function messages(): array
     {
+        $maxVideoLabel = self::formatVideoDurationLabel(self::resolveMaxVideoDuration());
+
         return [
             'videotrons.required' => 'Silakan pilih minimal 1 perangkat videotron yang tersedia.',
             'videotrons.min' => 'Silakan pilih minimal 1 perangkat videotron.',
@@ -101,7 +129,7 @@ class StoreSubmissionRequest extends FormRequest
             'gdrive_link.regex' => 'Hanya menerima tautan berkas/folder resmi dari Google Drive (misal: https://drive.google.com/...).',
             'video_duration_seconds.required_if' => 'Durasi video wajib diisi untuk jenis konten Video.',
             'video_duration_seconds.min' => 'Durasi video minimal 5 detik.',
-            'video_duration_seconds.max' => 'Durasi video maksimal 3 menit (180 detik).',
+            'video_duration_seconds.max' => "Durasi video maksimal {$maxVideoLabel}.",
             'surat_peminjaman.required' => 'Surat permohonan resmi (PDF) wajib dilampirkan.',
             'surat_peminjaman.mimes' => 'Berkas surat permohonan harus berformat PDF.',
             'surat_peminjaman.extensions' => 'Berkas surat permohonan harus berformat PDF.',

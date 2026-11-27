@@ -1,6 +1,21 @@
 {{-- =========================================================================
      ALPINE.JS LOGIC & STATE (Menjaga Input & Validasi Ringan)
      ========================================================================= --}}
+@php
+    $wizardMaxVideoSec = \App\Http\Requests\StoreSubmissionRequest::resolveMaxVideoDuration();
+    $wizardAllowMinuteUnit = $wizardMaxVideoSec >= 60;
+    $wizardMaxVideoMin = round($wizardMaxVideoSec / 60, 2);
+    $wizardMaxVideoLabel = \App\Http\Requests\StoreSubmissionRequest::formatVideoDurationLabel($wizardMaxVideoSec);
+    $wizardDefaultDurationSec = old('video_duration_seconds') !== null
+        ? (int) old('video_duration_seconds')
+        : $wizardMaxVideoSec;
+    $wizardDefaultDurationUnit = ($wizardAllowMinuteUnit && $wizardDefaultDurationSec >= 60 && $wizardDefaultDurationSec % 60 === 0)
+        ? 'menit'
+        : 'detik';
+    $wizardDefaultDurationValue = $wizardDefaultDurationUnit === 'menit'
+        ? (int) ($wizardDefaultDurationSec / 60)
+        : $wizardDefaultDurationSec;
+@endphp
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('submissionWizard', () => {
@@ -89,12 +104,21 @@
                 shortMonthNames: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
 
                 // Step 3: Content Info (Langsung pulihkan draf jika ada)
+                maxVideoDurationSeconds: {{ $wizardMaxVideoSec }},
+                maxVideoDurationMinutes: {{ $wizardMaxVideoMin }},
+                maxVideoDurationLabel: @json($wizardMaxVideoLabel),
                 form: {
                     title: (draftData && draftData.form && draftData.form.title !== undefined) ? draftData.form.title : @json(old('title', '')),
                     contentType: (draftData && draftData.form && draftData.form.contentType !== undefined) ? draftData.form.contentType : @json(old('content_type', 'video')),
-                    durationUnit: (draftData && draftData.form && draftData.form.durationUnit !== undefined) ? draftData.form.durationUnit : 'menit',
-                    durationValue: (draftData && draftData.form && draftData.form.durationValue !== undefined) ? draftData.form.durationValue : {{ old('video_duration_seconds') ? round((int) old('video_duration_seconds') / 60, 2) : 3 }},
-                    videoDurationSeconds: (draftData && draftData.form && draftData.form.videoDurationSeconds !== undefined) ? draftData.form.videoDurationSeconds : {{ old('video_duration_seconds', 180) }},
+                    durationUnit: (draftData && draftData.form && draftData.form.durationUnit !== undefined && ({{ $wizardAllowMinuteUnit ? 'true' : 'false' }} || draftData.form.durationUnit === 'detik'))
+                        ? draftData.form.durationUnit
+                        : @json($wizardDefaultDurationUnit),
+                    durationValue: (draftData && draftData.form && draftData.form.durationValue !== undefined && ({{ $wizardAllowMinuteUnit ? 'true' : 'false' }} || draftData.form.durationUnit === 'detik'))
+                        ? draftData.form.durationValue
+                        : {{ $wizardDefaultDurationValue }},
+                    videoDurationSeconds: (draftData && draftData.form && draftData.form.videoDurationSeconds !== undefined)
+                        ? Math.min({{ $wizardMaxVideoSec }}, parseInt(draftData.form.videoDurationSeconds, 10) || {{ $wizardDefaultDurationSec }})
+                        : {{ $wizardDefaultDurationSec }},
                     gdriveLink: (draftData && draftData.form && draftData.form.gdriveLink !== undefined) ? draftData.form.gdriveLink : @json(old('gdrive_link', '')),
                     picName: (draftData && draftData.form && draftData.form.picName !== undefined) ? draftData.form.picName : @json(old('pic_name', Auth::user()->name)),
                     whatsapp: (draftData && draftData.form && draftData.form.whatsapp !== undefined) ? draftData.form.whatsapp : @json(old('whatsapp', Auth::user()->phone ?? '')),

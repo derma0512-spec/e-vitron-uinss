@@ -451,4 +451,59 @@ class SubmissionWizardFlowTest extends TestCase
         $this->assertStringContainsString('>20<', $adminTwentyEndHtml);
         $this->assertStringNotContainsString("gotoPage(10, 'page')", $adminTwentyEndHtml);
     }
+
+    public function test_video_duration_limit_and_error_message_sync_with_admin_settings(): void
+    {
+        $basePayload = [
+            'videotrons' => [$this->videotron1->id],
+            'start_date' => now()->addDays(2)->format('Y-m-d'),
+            'end_date' => now()->addDays(4)->format('Y-m-d'),
+            'title' => 'Uji Sinkronisasi Durasi Video',
+            'content_type' => 'video',
+            'description' => 'Pengujian sinkronisasi batas durasi video dengan pengaturan admin.',
+            'pic_name' => 'Ahmad Pengaju',
+            'whatsapp' => '081234567890',
+            'gdrive_link' => 'https://drive.google.com/drive/folders/video-sync-test',
+        ];
+
+        // 1. Batas default 30 detik: wizard default ke detik (30), 31 detik ditolak pesan dinamis 30 detik
+        Setting::set('max_video_duration', 30, 'integer', 'policy');
+
+        $wizard30 = $this->actingAs($this->user)->get(route('pengajuan.create'));
+        $wizard30->assertOk();
+        $wizard30->assertSee('maxVideoDurationSeconds: 30', false);
+        $wizard30->assertSee('maxVideoDurationLabel: "30 detik"', false);
+
+        $this->actingAs($this->user)->post(route('pengajuan.store'), array_merge($basePayload, [
+            'video_duration_seconds' => 31,
+            'surat_peminjaman' => UploadedFile::fake()->create('surat-31.pdf', 100, 'application/pdf'),
+        ]))->assertSessionHasErrors([
+            'video_duration_seconds' => 'Durasi video maksimal 30 detik.',
+        ]);
+
+        $this->actingAs($this->user)->post(route('pengajuan.store'), array_merge($basePayload, [
+            'video_duration_seconds' => 30,
+            'surat_peminjaman' => UploadedFile::fake()->create('surat-30.pdf', 100, 'application/pdf'),
+        ]))->assertSessionHasNoErrors()->assertRedirect(route('pengajuan.create'));
+
+        // 2. Batas diubah admin ke 300 detik (5 menit): 240 detik diterima, 301 detik ditolak pesan 5 menit
+        Setting::set('max_video_duration', 300, 'integer', 'policy');
+
+        $wizard300 = $this->actingAs($this->user)->get(route('pengajuan.create'));
+        $wizard300->assertOk();
+        $wizard300->assertSee('maxVideoDurationSeconds: 300', false);
+        $wizard300->assertSee('maxVideoDurationLabel: "5 menit (300 detik)"', false);
+
+        $this->actingAs($this->user)->post(route('pengajuan.store'), array_merge($basePayload, [
+            'video_duration_seconds' => 301,
+            'surat_peminjaman' => UploadedFile::fake()->create('surat-301.pdf', 100, 'application/pdf'),
+        ]))->assertSessionHasErrors([
+            'video_duration_seconds' => 'Durasi video maksimal 5 menit (300 detik).',
+        ]);
+
+        $this->actingAs($this->user)->post(route('pengajuan.store'), array_merge($basePayload, [
+            'video_duration_seconds' => 240,
+            'surat_peminjaman' => UploadedFile::fake()->create('surat-240.pdf', 100, 'application/pdf'),
+        ]))->assertSessionHasNoErrors()->assertRedirect(route('pengajuan.create'));
+    }
 }

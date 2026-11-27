@@ -89,17 +89,17 @@
                                 <div class="flex items-center justify-between mb-1.5">
                                     <label class="block text-xs font-semibold text-slate-700">Durasi Video <span class="text-rose-500">*</span></label>
                                     <span class="text-[11px] font-semibold text-slate-400" 
-                                          x-text="form.durationUnit === 'menit' ? 'Maks. 3 Menit' : 'Maks. 180 Detik'"></span>
+                                          x-text="form.durationUnit === 'menit' ? `Maks. ${formatMaxMinutesLabel()} Menit` : `Maks. ${maxVideoDurationSeconds} Detik`"></span>
                                 </div>
                                 <div class="relative flex items-center bg-white border rounded-xl transition-all focus-within:ring-1 focus-within:ring-[#0E4D3C] focus-within:border-[#0E4D3C]"
                                      :class="formErrors.videoDuration ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300'">
                                     <input type="number" 
                                            :step="form.durationUnit === 'menit' ? '0.25' : '1'"
                                            :min="form.durationUnit === 'menit' ? '0.25' : '5'" 
-                                           :max="form.durationUnit === 'menit' ? '3' : '180'"
+                                           :max="form.durationUnit === 'menit' ? maxVideoDurationMinutes : maxVideoDurationSeconds"
                                            x-model="form.durationValue" 
                                            @input="updateDurationFromValue()"
-                                           :placeholder="form.durationUnit === 'menit' ? 'Contoh: 1 atau 3' : 'Contoh: 30 atau 60'"
+                                           :placeholder="form.durationUnit === 'menit' ? `Contoh: 1 s/d ${formatMaxMinutesLabel()}` : `Contoh: 15 atau ${maxVideoDurationSeconds}`"
                                            class="w-full pl-3.5 pr-2 py-2 bg-transparent text-slate-800 text-xs sm:text-sm focus:outline-none font-semibold placeholder:text-slate-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
                                            
                                     <!-- Toggle Pilihan Satuan: Detik / Menit -->
@@ -110,7 +110,8 @@
                                                 :class="form.durationUnit === 'detik' ? 'bg-[#0E4D3C] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800'">
                                             Detik
                                         </button>
-                                        <button type="button" 
+                                        <button type="button"
+                                                x-show="maxVideoDurationSeconds >= 60"
                                                 @click="setDurationUnit('menit')" 
                                                 class="px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer" 
                                                 :class="form.durationUnit === 'menit' ? 'bg-[#0E4D3C] text-white shadow-xs' : 'text-slate-500 hover:text-slate-800'">
