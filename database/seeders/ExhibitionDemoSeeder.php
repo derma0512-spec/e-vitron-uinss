@@ -42,7 +42,7 @@ class ExhibitionDemoSeeder extends Seeder
                 'account_status' => 'approved',
             ]
         );
-        $admin->is_super_admin = true;
+        $admin->is_super_admin = false;
         $admin->save();
 
         $applicant = User::updateOrCreate(

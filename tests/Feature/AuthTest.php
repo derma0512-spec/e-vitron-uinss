@@ -340,7 +340,8 @@ class AuthTest extends TestCase
         $this->assertSame(3, Submission::count());
 
         $admin = User::where('email', 'admin.evitron@uinssc.ac.id')->firstOrFail();
-        $this->assertTrue($admin->isSuperAdmin());
+        $this->assertTrue($admin->isActiveAdmin());
+        $this->assertFalse($admin->isSuperAdmin());
         config(['services.demo.quick_login' => false]);
         $adminDashboardDefault = $this->actingAs($admin)->get('/admin');
         $adminDashboardDefault->assertStatus(200);
