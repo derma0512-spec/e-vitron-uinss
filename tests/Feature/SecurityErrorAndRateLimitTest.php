@@ -829,4 +829,49 @@ class SecurityErrorAndRateLimitTest extends TestCase
         $this->assertFalse($masjid->is_active);
         $this->assertSame('2560x1440', $masjid->resolution);
     }
+
+    public function test_download_surat_sets_safe_content_disposition_and_blocks_path_traversal(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('surat_peminjaman/sample.pdf', '%PDF-1.4 sample content');
+
+        $owner = User::factory()->create(['role' => 'mahasiswa']);
+
+        $submission = Submission::create([
+            'user_id' => $owner->id,
+            'ticket_code' => 'VTR-202611-9001',
+            'title' => 'Pengujian Sanitasi Header PDF',
+            'content_type' => 'poster',
+            'description' => 'Deskripsi singkat.',
+            'pic_name' => 'Pemohon Uji',
+            'organization' => 'Unit Uji',
+            'whatsapp' => '081234567890',
+            'gdrive_link' => 'https://drive.google.com/drive/folders/test-header',
+            'surat_peminjaman' => 'surat_peminjaman/sample.pdf',
+            'start_date' => now()->addDays(5)->format('Y-m-d'),
+            'end_date' => now()->addDays(6)->format('Y-m-d'),
+            'status' => 'menunggu',
+        ]);
+
+        $response = $this->actingAs($owner)->get(route('pengajuan.surat', $submission->ticket_code));
+        $response->assertOk();
+
+        $disposition = (string) $response->headers->get('Content-Disposition');
+        $this->assertStringStartsWith('inline;', $disposition);
+        $this->assertStringContainsString('VTR-202611-9001', $disposition);
+        $this->assertStringNotContainsString('..', $disposition);
+
+        // Upaya path traversal pada kolom surat_peminjaman wajib ditolak 404
+        $submission->update(['surat_peminjaman' => '../../.env']);
+
+        $this->actingAs($owner)
+            ->get(route('pengajuan.surat', $submission->ticket_code))
+            ->assertNotFound();
+
+        $submission->update(['surat_peminjaman' => '..\\..\\.env']);
+
+        $this->actingAs($owner)
+            ->get(route('pengajuan.surat', $submission->ticket_code))
+            ->assertNotFound();
+    }
 }

@@ -8,6 +8,7 @@ use App\Notifications\AdminAlertNotification;
 use App\Notifications\SubmissionStatusNotification;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
@@ -33,12 +34,22 @@ class DatabaseSeeder extends Seeder
         $vSiber = $videotrons['siber'];
         $vFebi = $videotrons['febi'];
 
+        $localAdminSecret = trim((string) env('LOCAL_DEMO_ADMIN_PASSWORD', ''));
+        if ($localAdminSecret === '') {
+            $localAdminSecret = Str::random(16);
+        }
+
+        $localUserSecret = trim((string) env('LOCAL_DEMO_USER_PASSWORD', ''));
+        if ($localUserSecret === '') {
+            $localUserSecret = Str::random(16);
+        }
+
         // 2. Akun Admin Demo E-VITRON (Hanya untuk local / testing)
         $admin = User::updateOrCreate(
             ['email' => 'admin@uin.ac.id'],
             [
                 'name' => 'Admin E-VITRON',
-                'password' => Hash::make('admin123'),
+                'password' => Hash::make($localAdminSecret),
                 'role' => 'admin',
                 'identifier' => 'ADM-001',
                 'phone' => '081234567890',
@@ -56,7 +67,7 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Ahmad Fadhil',
                 'email' => '2208101001@student.uin.ac.id',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($localUserSecret),
                 'role' => 'mahasiswa',
                 'phone' => '08123456789',
                 'unit_or_prodi' => 'Teknik Informatika',
@@ -70,7 +81,7 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Rizky Budianto',
                 'email' => '2388010999@student.uin.ac.id',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($localUserSecret),
                 'role' => 'mahasiswa',
                 'phone' => '082198765432',
                 'unit_or_prodi' => 'FITK',
@@ -84,13 +95,15 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Dr. H. Syarifudin, M.Kom',
                 'email' => 'syarifudin@uin.ac.id',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($localUserSecret),
                 'role' => 'dosen',
                 'phone' => '081345678910',
                 'unit_or_prodi' => 'Fakultas Sains dan Teknologi',
                 'auth_type' => 'campus_sso',
             ]
         );
+
+        $this->command?->info('Akun demo lokal berhasil disiapkan (atur LOCAL_DEMO_ADMIN_PASSWORD / LOCAL_DEMO_USER_PASSWORD di .env lokal bila ingin kredensial tetap).');
 
         // 6. Data Dummy Pengajuan Lengkap (Dimiliki oleh Akun Demo Ahmad Fadhil)
         // Card 1: Sosialisasi Penerimaan Mahasiswa Baru (Menunggu)

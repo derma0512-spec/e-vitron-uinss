@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 
 class SubmissionController extends Controller
 {
@@ -447,6 +448,9 @@ class SubmissionController extends Controller
         }
 
         $relativePath = ltrim((string) $submission->surat_peminjaman, '/');
+        if (str_contains($relativePath, '..') || str_contains($relativePath, '\\') || str_contains($relativePath, "\0")) {
+            abort(404);
+        }
 
         if (Storage::disk('local')->exists($relativePath)) {
             $fullPath = Storage::disk('local')->path($relativePath);
@@ -456,13 +460,38 @@ class SubmissionController extends Controller
             abort(404);
         }
 
-        $filename = $submission->surat_peminjaman_filename ?: 'Surat-Permohonan.pdf';
+        $safeFilename = $this->sanitizePdfFilename($submission->surat_peminjaman_filename, 'Surat-Permohonan.pdf');
+        $disposition = HeaderUtils::makeDisposition(
+            HeaderUtils::DISPOSITION_INLINE,
+            $safeFilename,
+            'Surat-Permohonan.pdf'
+        );
 
         return response()->file($fullPath, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="'.$filename.'"',
+            'Content-Disposition' => $disposition,
             'X-Content-Type-Options' => 'nosniff',
             'Cache-Control' => 'private, no-transform, max-age=0',
         ]);
+    }
+
+    /**
+     * Membersihkan nama berkas PDF agar aman pada header HTTP Content-Disposition.
+     */
+    private function sanitizePdfFilename(?string $filename, string $fallback = 'Surat-Permohonan.pdf'): string
+    {
+        $clean = basename(str_replace('\\', '/', (string) $filename));
+        $clean = preg_replace('/[\x00-\x1F\x7F"\';\\\\\/]+/', '', $clean) ?? '';
+        $clean = trim($clean, ". \t\n\r\0\x0B");
+
+        if ($clean === '') {
+            return $fallback;
+        }
+
+        if (! str_ends_with(strtolower($clean), '.pdf')) {
+            $clean .= '.pdf';
+        }
+
+        return $clean;
     }
 }
