@@ -198,20 +198,22 @@ class ListSubmissions extends Page
 
     public function confirmApprove(): void
     {
-        if (! $this->selectedSubmission) {
+        $submission = $this->selectedSubmission;
+        if (! $submission) {
             return;
         }
 
         try {
-            app(SubmissionDecisionService::class)->approve($this->selectedSubmission, $this->approveNotes);
+            app(SubmissionDecisionService::class)->approve($submission, $this->approveNotes);
 
             $this->showApproveModal = false;
             $this->approveNotes = null;
             $this->fromNotification = false;
+            unset($this->selectedSubmission);
 
             Notification::make()
                 ->title('Pengajuan Berhasil Disetujui!')
-                ->body("Tiket {$this->selectedSubmission->ticket_code} disetujui untuk persiapan penayangan.")
+                ->body("Tiket {$submission->ticket_code} disetujui untuk persiapan penayangan.")
                 ->success()
                 ->send();
         } catch (DomainException $e) {
@@ -283,8 +285,10 @@ class ListSubmissions extends Page
         $this->revisionError = null;
 
         try {
+            $submission = $this->selectedSubmission;
+
             app(SubmissionDecisionService::class)->requestRevision(
-                $this->selectedSubmission,
+                $submission,
                 $this->revisionFeedback,
                 auth()->id(),
                 $type
@@ -293,10 +297,11 @@ class ListSubmissions extends Page
             $this->showRevisionModal = false;
             $this->revisionFeedback = '';
             $this->fromNotification = false;
+            unset($this->selectedSubmission);
 
             Notification::make()
                 ->title('Permintaan Revisi Telah Dikirim')
-                ->body("Catatan revisi untuk tiket {$this->selectedSubmission->ticket_code} berhasil dikirim ke pengaju.")
+                ->body("Catatan revisi untuk tiket {$submission->ticket_code} berhasil dikirim ke pengaju.")
                 ->warning()
                 ->send();
         } catch (DomainException $e) {
@@ -343,15 +348,18 @@ class ListSubmissions extends Page
         $this->rejectError = null;
 
         try {
-            app(SubmissionDecisionService::class)->reject($this->selectedSubmission, $this->rejectReason);
+            $submission = $this->selectedSubmission;
+
+            app(SubmissionDecisionService::class)->reject($submission, $this->rejectReason);
 
             $this->showRejectModal = false;
             $this->rejectReason = '';
             $this->fromNotification = false;
+            unset($this->selectedSubmission);
 
             Notification::make()
                 ->title('Pengajuan Ditolak')
-                ->body("Alasan penolakan tiket {$this->selectedSubmission->ticket_code} telah disimpan.")
+                ->body("Alasan penolakan tiket {$submission->ticket_code} telah disimpan.")
                 ->danger()
                 ->send();
         } catch (DomainException $e) {
@@ -361,16 +369,18 @@ class ListSubmissions extends Page
 
     public function markMaterialDownloaded(): void
     {
-        if (! $this->selectedSubmission) {
+        $submission = $this->selectedSubmission;
+        if (! $submission) {
             return;
         }
 
         try {
-            app(SubmissionDecisionService::class)->markMaterialDownloaded($this->selectedSubmission);
+            app(SubmissionDecisionService::class)->markMaterialDownloaded($submission);
+            unset($this->selectedSubmission);
 
             Notification::make()
                 ->title('Materi Ditandai Sudah Diunduh')
-                ->body("Materi tiket {$this->selectedSubmission->ticket_code} siap untuk penayangan.")
+                ->body("Materi tiket {$submission->ticket_code} siap untuk penayangan.")
                 ->success()
                 ->send();
         } catch (DomainException $e) {

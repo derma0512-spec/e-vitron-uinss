@@ -6,6 +6,7 @@ use App\Notifications\VideotronConditionNotification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -165,10 +166,86 @@ class Videotron extends Model
         return asset($this->getDefaultImagePath());
     }
 
+    /**
+     * Memformat teks resolusi secara konsisten menggunakan simbol perkalian (contoh: 960 × 480).
+     */
+    public function formattedResolution(): string
+    {
+        $raw = trim((string) $this->resolution);
+
+        if (preg_match('/(\d+)\s*[xX×]\s*(\d+)/u', $raw, $matches) === 1) {
+            return ((int) $matches[1]).' × '.((int) $matches[2]);
+        }
+
+        return $raw;
+    }
+
+    /**
+     * Menghitung rasio aspek aktual berdasarkan resolusi piksel layar (menggunakan FPB/GCD).
+     */
+    public function aspectRatioLabel(): ?string
+    {
+        if (preg_match('/(\d+)\s*[xX×]\s*(\d+)/u', (string) $this->resolution, $matches) !== 1) {
+            return null;
+        }
+
+        $width = (int) $matches[1];
+        $height = (int) $matches[2];
+
+        if ($width <= 0 || $height <= 0) {
+            return null;
+        }
+
+        $gcd = self::greatestCommonDivisor($width, $height);
+        $ratioWidth = intdiv($width, $gcd);
+        $ratioHeight = intdiv($height, $gcd);
+
+        if ($ratioWidth <= 24 && $ratioHeight <= 24) {
+            return "{$ratioWidth}:{$ratioHeight}";
+        }
+
+        if ($width >= $height) {
+            $decimal = rtrim(rtrim(number_format($width / $height, 2, '.', ''), '0'), '.');
+
+            return "{$decimal}:1";
+        }
+
+        $decimal = rtrim(rtrim(number_format($height / $width, 2, '.', ''), '0'), '.');
+
+        return "1:{$decimal}";
+    }
+
+    /**
+     * Menggabungkan orientasi layar dengan rasio aspek hasil perhitungan resolusi (contoh: Landscape (7:2)).
+     */
+    public function orientationWithRatioLabel(): string
+    {
+        $orientation = match (strtolower(trim((string) $this->orientation))) {
+            'landscape' => 'Landscape',
+            'portrait' => 'Portrait',
+            default => ucfirst(trim((string) $this->orientation)),
+        };
+
+        $ratio = $this->aspectRatioLabel();
+
+        return $ratio !== null ? "{$orientation} ({$ratio})" : $orientation;
+    }
+
+    private static function greatestCommonDivisor(int $a, int $b): int
+    {
+        while ($b !== 0) {
+            $remainder = $a % $b;
+            $a = $b;
+            $b = $remainder;
+        }
+
+        return $a;
+    }
+
     public function submissions(): BelongsToMany
     {
         return $this->belongsToMany(Submission::class, 'submission_videotron')
-            ->withPivot('playback_status')
+            ->withPivot(['playback_status', 'taken_down_at', 'taken_down_by'])
             ->withTimestamps();
     }
 
@@ -193,6 +270,38 @@ class Videotron extends Model
             })
             ->get();
 
+        if ($submissions->isEmpty()) {
+            return 0;
+        }
+
+        $userIds = $submissions->pluck('user_id')->filter()->unique()->values()->all();
+
+        /** @var array<string, array<string, mixed>> $latestNotificationDataByPair */
+        $latestNotificationDataByPair = $userIds === []
+            ? []
+            : DatabaseNotification::query()
+                ->where('notifiable_type', User::class)
+                ->whereIn('notifiable_id', $userIds)
+                ->whereIn('data->event', ['videotron_disruption', 'videotron_recovered'])
+                ->where('data->videotron_id', $this->id)
+                ->latest()
+                ->get(['notifiable_id', 'data', 'created_at'])
+                ->reduce(function (array $carry, DatabaseNotification $notification): array {
+                    $data = is_array($notification->data) ? $notification->data : [];
+                    $submissionId = $data['submission_id'] ?? null;
+
+                    if ($submissionId === null) {
+                        return $carry;
+                    }
+
+                    $pairKey = $notification->notifiable_id.':'.(int) $submissionId;
+                    if (! array_key_exists($pairKey, $carry)) {
+                        $carry[$pairKey] = $data;
+                    }
+
+                    return $carry;
+                }, []);
+
         $notifiedCount = 0;
         $event = $type === 'recovered' ? 'videotron_recovered' : 'videotron_disruption';
         $batchId = (string) Str::uuid();
@@ -203,15 +312,10 @@ class Videotron extends Model
                 continue;
             }
 
-            $lastConditionNotification = $user->notifications()
-                ->whereIn('data->event', ['videotron_disruption', 'videotron_recovered'])
-                ->where('data->submission_id', $submission->id)
-                ->where('data->videotron_id', $this->id)
-                ->latest()
-                ->first();
+            $pairKey = $user->id.':'.(int) $submission->id;
+            $lastData = $latestNotificationDataByPair[$pairKey] ?? null;
 
-            if ($lastConditionNotification) {
-                $lastData = $lastConditionNotification->data ?? [];
+            if ($lastData !== null) {
                 $isSameEvent = ($lastData['event'] ?? null) === $event;
                 $isSameCondition = ($lastData['videotron_condition'] ?? null) === $this->condition;
 

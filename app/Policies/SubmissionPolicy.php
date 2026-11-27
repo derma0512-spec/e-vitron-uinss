@@ -12,7 +12,7 @@ class SubmissionPolicy
      */
     public function view(User $user, Submission $submission): bool
     {
-        return $user->role === 'admin' || (int) $submission->user_id === (int) $user->id;
+        return $user->isActiveAdmin() || (int) $submission->user_id === (int) $user->id;
     }
 
     /**
@@ -20,7 +20,7 @@ class SubmissionPolicy
      */
     public function downloadSurat(User $user, Submission $submission): bool
     {
-        return $user->role === 'admin' || (int) $submission->user_id === (int) $user->id;
+        return $user->isActiveAdmin() || (int) $submission->user_id === (int) $user->id;
     }
 
     /**

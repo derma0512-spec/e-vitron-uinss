@@ -81,7 +81,7 @@ class VideotronSeeder extends Seeder
 
         $seeded = [];
         foreach ($definitions as $key => $attributes) {
-            $seeded[$key] = Videotron::updateOrCreate(
+            $seeded[$key] = Videotron::firstOrCreate(
                 ['name' => $attributes['name']],
                 $attributes
             );

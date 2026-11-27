@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -282,5 +283,52 @@ class BridgeSSOTest extends TestCase
 
         // Pastikan tidak ada request HTTP yang terkirim ke API portal kampus
         Http::assertNothingSent();
+    }
+
+    public function test_campus_sso_account_does_not_cache_campus_password_or_fallback_when_sso_rejects(): void
+    {
+        Http::fake([
+            'https://bridge.uinssc.ac.id/api/v2/portal/login' => Http::sequence()
+                ->push([
+                    'status' => true,
+                    'data' => ['token' => 'first_valid_sso_token'],
+                ], 200)
+                ->push([
+                    'status' => false,
+                    'message' => 'NIM atau kata sandi portal tidak sesuai.',
+                ], 401),
+            'https://bridge.uinssc.ac.id/api/v2/profil' => Http::response([
+                'status' => true,
+                'data' => [
+                    'nama' => 'Siti Aisyah',
+                    'nim' => '2208109999',
+                    'email' => 'siti.aisyah@uinssc.ac.id',
+                    'prodi' => 'Sistem Informasi',
+                ],
+            ], 200),
+            'https://bridge.uinssc.ac.id/api/v2/logout' => Http::response(['status' => true], 200),
+        ]);
+
+        // 1. Login pertama via SSO berhasil
+        $this->post('/login', [
+            'identifier' => '2208109999',
+            'password' => 'CampusSecret2026!',
+        ])->assertRedirect(route('home'));
+
+        $user = User::where('identifier', '2208109999')->firstOrFail();
+        $this->assertSame('campus_sso', $user->auth_type);
+        $this->assertFalse(Hash::check('CampusSecret2026!', $user->password));
+
+        // 2. Logout lalu coba masuk lagi memakai password lama saat SSO menolak (password kampus diganti / akun dibekukan)
+        $this->post('/logout')->assertRedirect(route('login'));
+
+        $staleResponse = $this->post('/login', [
+            'identifier' => '2208109999',
+            'password' => 'CampusSecret2026!',
+        ]);
+
+        $staleResponse->assertRedirect();
+        $staleResponse->assertSessionHas('error', 'NIM atau kata sandi portal tidak sesuai.');
+        $this->assertGuest();
     }
 }

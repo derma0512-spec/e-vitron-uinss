@@ -3,8 +3,12 @@
 namespace App\Filament\Pages;
 
 use App\Models\Setting;
+use App\Models\User;
+use App\Services\AdminAccountService;
+use DomainException;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Illuminate\Database\Eloquent\Collection;
 
 class ManageSettings extends Page
 {
@@ -33,7 +37,7 @@ class ManageSettings extends Page
         return [];
     }
 
-    public string $activeTab = 'signatory'; // 'signatory', 'policy', 'service', 'helpdesk'
+    public string $activeTab = 'signatory'; // 'signatory', 'policy', 'service', 'helpdesk', 'admins'
 
     protected $queryString = [
         'activeTab' => ['as' => 'tab', 'except' => 'signatory'],
@@ -59,6 +63,8 @@ class ManageSettings extends Page
     public string $institution_email = '';
 
     // Tab 2: Kebijakan & Aturan Pengajuan
+    public bool $min_days_before_enabled = true;
+
     public int $min_days_before = 3;
 
     public bool $limit_display_days_enabled = false;
@@ -89,11 +95,51 @@ class ManageSettings extends Page
 
     public string $helpdesk_location = '';
 
+    // Tab 5: Tim Admin (Khusus Super Admin)
+    public bool $showCreateAdminModal = false;
+
+    public string $new_admin_name = '';
+
+    public string $new_admin_email = '';
+
+    public string $new_admin_unit = 'Tim Pengelola E-VITRON';
+
+    public string $new_admin_phone = '';
+
+    public string $new_admin_password = '';
+
+    public string $new_admin_password_confirmation = '';
+
+    public bool $new_admin_is_super_admin = false;
+
+    public bool $showResetPasswordModal = false;
+
+    public ?int $reset_password_admin_id = null;
+
+    public string $reset_password_admin_name = '';
+
+    public string $reset_password_admin_email = '';
+
+    public string $reset_admin_password = '';
+
+    public string $reset_admin_password_confirmation = '';
+
+    public function canManageAdmins(): bool
+    {
+        return (bool) auth()->user()?->isSuperAdmin();
+    }
+
     public function mount(): void
     {
+        $allowedTabs = $this->canManageAdmins()
+            ? ['signatory', 'policy', 'service', 'helpdesk', 'admins']
+            : ['signatory', 'policy', 'service', 'helpdesk'];
+
         $requestedTab = request()->query('tab');
-        if (is_string($requestedTab) && in_array($requestedTab, ['signatory', 'policy', 'service', 'helpdesk'], true)) {
+        if (is_string($requestedTab) && in_array($requestedTab, $allowedTabs, true)) {
             $this->activeTab = $requestedTab;
+        } else {
+            $this->activeTab = 'signatory';
         }
 
         $settings = Setting::allCached();
@@ -110,7 +156,13 @@ class ManageSettings extends Page
         $this->institution_email = (string) ($settings['institution_email'] ?? 'info@uinssc.ac.id');
 
         // Tab 2
-        $this->min_days_before = (int) ($settings['min_days_before'] ?? 3);
+        $savedMinDays = (int) ($settings['min_days_before'] ?? 3);
+        $this->min_days_before_enabled = array_key_exists('min_days_before_enabled', $settings)
+            ? (bool) $settings['min_days_before_enabled']
+            : ($savedMinDays > 0);
+        $this->min_days_before = $savedMinDays > 0
+            ? $savedMinDays
+            : max(1, (int) ($settings['min_days_before_last'] ?? 3));
         $savedMaxDays = (int) ($settings['max_display_days'] ?? 0);
         $this->limit_display_days_enabled = (bool) ($settings['limit_display_days_enabled'] ?? false);
         $this->max_display_days = $savedMaxDays > 0 ? $savedMaxDays : 7;
@@ -134,9 +186,243 @@ class ManageSettings extends Page
         $this->helpdesk_location = (string) ($settings['helpdesk_location'] ?? ($settings['contact_office_location'] ?? 'Gedung Rektorat Kampus UIN Siber Syekh Nurjati Cirebon'));
     }
 
+    public function updatedActiveTab(string $value): void
+    {
+        if ($value === 'admins' && ! $this->canManageAdmins()) {
+            $this->activeTab = 'signatory';
+        }
+    }
+
     public function setTab(string $tab): void
     {
-        $this->activeTab = $tab;
+        if ($tab === 'admins' && ! $this->canManageAdmins()) {
+            abort(403);
+        }
+
+        if (in_array($tab, ['signatory', 'policy', 'service', 'helpdesk', 'admins'], true)) {
+            $this->activeTab = $tab;
+        }
+    }
+
+    /**
+     * Daftar seluruh akun admin (aktif & nonaktif) khusus untuk Super Admin.
+     *
+     * @return Collection<int, User>
+     */
+    public function getAdminAccountsProperty(): Collection
+    {
+        if (! $this->canManageAdmins()) {
+            return new Collection;
+        }
+
+        return User::query()
+            ->where('role', 'admin')
+            ->orderByRaw("CASE WHEN account_status IS NULL OR account_status = 'approved' THEN 0 ELSE 1 END")
+            ->orderByDesc('is_super_admin')
+            ->orderBy('name')
+            ->get();
+    }
+
+    public function openCreateAdminModal(): void
+    {
+        $this->authorizeAdminManagement();
+        $this->resetValidation();
+        $this->new_admin_name = '';
+        $this->new_admin_email = '';
+        $this->new_admin_unit = 'Tim Pengelola E-VITRON';
+        $this->new_admin_phone = '';
+        $this->new_admin_password = '';
+        $this->new_admin_password_confirmation = '';
+        $this->new_admin_is_super_admin = false;
+        $this->showCreateAdminModal = true;
+    }
+
+    public function closeCreateAdminModal(): void
+    {
+        $this->showCreateAdminModal = false;
+        $this->new_admin_password = '';
+        $this->new_admin_password_confirmation = '';
+        $this->resetValidation();
+    }
+
+    public function createAdminAccount(): void
+    {
+        $this->authorizeAdminManagement();
+
+        $validated = $this->validate([
+            'new_admin_name' => 'required|string|max:100',
+            'new_admin_email' => 'required|email|max:100|unique:users,email',
+            'new_admin_unit' => 'nullable|string|max:150',
+            'new_admin_phone' => ['nullable', 'string', 'max:20', 'regex:/^([0-9\s\-\+\(\)]*)$/'],
+            'new_admin_password' => 'required|string|min:8|confirmed',
+            'new_admin_is_super_admin' => 'boolean',
+        ], [
+            'new_admin_name.required' => 'Nama lengkap admin wajib diisi.',
+            'new_admin_email.required' => 'Alamat email login wajib diisi.',
+            'new_admin_email.email' => 'Format alamat email tidak valid.',
+            'new_admin_email.unique' => 'Alamat email ini sudah digunakan akun lain.',
+            'new_admin_phone.regex' => 'Nomor WhatsApp hanya boleh berisi angka dan tanda + / -.',
+            'new_admin_password.required' => 'Password awal wajib diisi.',
+            'new_admin_password.min' => 'Password awal minimal 8 karakter.',
+            'new_admin_password.confirmed' => 'Konfirmasi password tidak cocok.',
+        ]);
+
+        try {
+            $created = app(AdminAccountService::class)->createAdmin([
+                'name' => $validated['new_admin_name'],
+                'email' => $validated['new_admin_email'],
+                'unit_or_prodi' => $validated['new_admin_unit'] ?? null,
+                'phone' => $validated['new_admin_phone'] ?? null,
+                'password' => $validated['new_admin_password'],
+            ], (bool) $validated['new_admin_is_super_admin'], auth()->user());
+
+            $this->closeCreateAdminModal();
+            unset($this->adminAccounts);
+
+            Notification::make()
+                ->title('Akun Admin Berhasil Ditambahkan')
+                ->body("{$created->name} ({$created->email}) aktif sebagai {$created->adminRoleLabel()}.")
+                ->success()
+                ->send();
+        } catch (DomainException $e) {
+            Notification::make()
+                ->title('Gagal Menambahkan Admin')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+
+    public function openResetPasswordModal(int $adminId): void
+    {
+        $this->authorizeAdminManagement();
+
+        $target = User::query()->where('role', 'admin')->findOrFail($adminId);
+
+        $this->resetValidation();
+        $this->reset_password_admin_id = $target->id;
+        $this->reset_password_admin_name = $target->name;
+        $this->reset_password_admin_email = $target->email;
+        $this->reset_admin_password = '';
+        $this->reset_admin_password_confirmation = '';
+        $this->showResetPasswordModal = true;
+    }
+
+    public function closeResetPasswordModal(): void
+    {
+        $this->showResetPasswordModal = false;
+        $this->reset_password_admin_id = null;
+        $this->reset_password_admin_name = '';
+        $this->reset_password_admin_email = '';
+        $this->reset_admin_password = '';
+        $this->reset_admin_password_confirmation = '';
+        $this->resetValidation();
+    }
+
+    public function confirmResetAdminPassword(): void
+    {
+        $this->authorizeAdminManagement();
+
+        $this->validate([
+            'reset_password_admin_id' => 'required|integer',
+            'reset_admin_password' => 'required|string|min:8|confirmed',
+        ], [
+            'reset_admin_password.required' => 'Password baru wajib diisi.',
+            'reset_admin_password.min' => 'Password baru minimal 8 karakter.',
+            'reset_admin_password.confirmed' => 'Konfirmasi password baru tidak cocok.',
+        ]);
+
+        $target = User::query()->where('role', 'admin')->findOrFail((int) $this->reset_password_admin_id);
+
+        try {
+            app(AdminAccountService::class)->resetAdminPassword(
+                $target,
+                $this->reset_admin_password,
+                auth()->user()
+            );
+
+            $targetName = $target->name;
+            $this->closeResetPasswordModal();
+
+            Notification::make()
+                ->title('Password Admin Berhasil Direset')
+                ->body("Password baru untuk {$targetName} telah disimpan. Sesi login lama telah dicabut.")
+                ->success()
+                ->send();
+        } catch (DomainException $e) {
+            Notification::make()
+                ->title('Gagal Mereset Password')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+
+    public function toggleAdminStatus(int $adminId): void
+    {
+        $this->authorizeAdminManagement();
+
+        $target = User::query()->where('role', 'admin')->findOrFail($adminId);
+        $nextActive = ! $target->isApproved();
+
+        try {
+            $updated = app(AdminAccountService::class)->setAdminActiveStatus(
+                $target,
+                $nextActive,
+                auth()->user()
+            );
+
+            unset($this->adminAccounts);
+
+            Notification::make()
+                ->title($nextActive ? 'Akun Admin Diaktifkan Kembali' : 'Akun Admin Dinonaktifkan')
+                ->body($nextActive
+                    ? "{$updated->name} kini dapat kembali masuk ke panel admin E-VITRON."
+                    : "{$updated->name} telah dinonaktifkan. Seluruh jejak riwayat audit tetap tersimpan utuh.")
+                ->success()
+                ->send();
+        } catch (DomainException $e) {
+            Notification::make()
+                ->title('Perubahan Status Ditolak')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+
+    public function toggleSuperAdminRole(int $adminId): void
+    {
+        $this->authorizeAdminManagement();
+
+        $target = User::query()->where('role', 'admin')->findOrFail($adminId);
+        $makeSuperAdmin = ! $target->is_super_admin;
+
+        try {
+            $updated = app(AdminAccountService::class)->updateAdminRole(
+                $target,
+                $makeSuperAdmin,
+                auth()->user()
+            );
+
+            unset($this->adminAccounts);
+
+            Notification::make()
+                ->title('Tingkat Akses Admin Diperbarui')
+                ->body("{$updated->name} kini berperan sebagai {$updated->adminRoleLabel()}.")
+                ->success()
+                ->send();
+        } catch (DomainException $e) {
+            Notification::make()
+                ->title('Perubahan Peran Ditolak')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+
+    private function authorizeAdminManagement(): void
+    {
+        abort_unless($this->canManageAdmins(), 403);
     }
 
     public function save(): void
@@ -144,12 +430,14 @@ class ManageSettings extends Page
         $this->validate([
             'signatory_admin_title' => 'required|string|max:255',
             'signatory_admin_name' => 'required|string|max:255',
-            'min_days_before' => 'required|integer|min:0|max:30',
+            'min_days_before' => $this->min_days_before_enabled ? 'required|integer|min:1|max:30' : 'nullable|integer|min:0|max:30',
             'max_display_days' => 'nullable|integer|min:1|max:365',
             'max_video_duration' => 'required|integer|min:5|max:300',
             'max_file_size' => 'required|integer|min:5|max:500',
         ]);
 
+        $rememberedMinDays = max(1, min(30, (int) ($this->min_days_before ?: 3)));
+        $effectiveMinDays = $this->min_days_before_enabled ? $rememberedMinDays : 0;
         $effectiveMaxDays = $this->limit_display_days_enabled ? max(1, (int) $this->max_display_days) : 0;
 
         $data = [
@@ -163,7 +451,9 @@ class ManageSettings extends Page
             'institution_web' => ['value' => $this->institution_web, 'type' => 'string', 'group' => 'signatory'],
             'institution_email' => ['value' => $this->institution_email, 'type' => 'string', 'group' => 'signatory'],
 
-            'min_days_before' => ['value' => $this->min_days_before, 'type' => 'integer', 'group' => 'policy'],
+            'min_days_before_enabled' => ['value' => $this->min_days_before_enabled, 'type' => 'boolean', 'group' => 'policy'],
+            'min_days_before_last' => ['value' => $rememberedMinDays, 'type' => 'integer', 'group' => 'policy'],
+            'min_days_before' => ['value' => $effectiveMinDays, 'type' => 'integer', 'group' => 'policy'],
             'limit_display_days_enabled' => ['value' => $this->limit_display_days_enabled, 'type' => 'boolean', 'group' => 'policy'],
             'max_display_days' => ['value' => $effectiveMaxDays, 'type' => 'integer', 'group' => 'policy'],
             'max_video_duration' => ['value' => $this->max_video_duration, 'type' => 'integer', 'group' => 'policy'],

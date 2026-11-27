@@ -297,7 +297,11 @@
                                 <span class="h-2 w-2 rounded-full bg-[#D9A93B]"></span>
                             </span>
                             <div>
-                                <strong class="text-slate-800">Waktu Pengajuan:</strong> Disarankan mengirimkan pengajuan minimal <strong class="text-[#0E4D3C]">H-{{ $minDaysBefore }} hari kerja</strong> sebelum tanggal penayangan perdana yang diharapkan.
+                                @if($minDaysBefore > 0)
+                                    <strong class="text-slate-800">Waktu Pengajuan:</strong> Disarankan mengirimkan pengajuan minimal <strong class="text-[#0E4D3C]">H-{{ $minDaysBefore }} ({{ $minDaysBefore }} hari kerja)</strong> sebelum tanggal penayangan perdana yang diharapkan.
+                                @else
+                                    <strong class="text-slate-800">Waktu Pengajuan:</strong> Pengajuan dapat dikirim <strong class="text-[#0E4D3C]">hingga hari penayangan (Hari-H)</strong> sesuai ketersediaan slot dan antrean kurasi Tim Admin.
+                                @endif
                             </div>
                         </li>
                         <li class="flex items-start gap-2.5">

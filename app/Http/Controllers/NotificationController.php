@@ -144,7 +144,9 @@ class NotificationController extends Controller
         if (! $user) {
             return response()->json([
                 'unread_count' => 0,
+                'total_count' => 0,
                 'notifications' => [],
+                'drawer_notifications' => [],
                 'latest' => null,
             ]);
         }
@@ -153,16 +155,21 @@ class NotificationController extends Controller
             ->where('data->event', '!=', 'submitted')
             ->count();
 
-        // Ambil notifikasi unread terbaru (cukup untuk pengelompokan pop-up per kejadian)
-        $recentUnread = $user->unreadNotifications()
+        $totalCount = $user->notifications()
+            ->where('data->event', '!=', 'submitted')
+            ->count();
+
+        // Ambil notifikasi terbaru (unread & read) untuk sinkronisasi laci lonceng real-time
+        $recentAll = $user->notifications()
             ->where('data->event', '!=', 'submitted')
             ->latest()
-            ->take(10)
+            ->take(50)
             ->get();
 
         $notificationsList = [];
+        $drawerNotifications = [];
 
-        foreach ($recentUnread as $notif) {
+        foreach ($recentAll as $notif) {
             $data = $notif->data ?? [];
             $event = $data['event'] ?? 'status';
             $title = $data['title'] ?? 'Pemberitahuan';
@@ -170,35 +177,59 @@ class NotificationController extends Controller
             $title = preg_replace('/^Kabar\s+Baik:\s*Perangkat\s*(.*?)\s*Selesai\s*Diperbaiki$/ui', 'Kabar Baik: $1 Pulih', $title);
             $title = preg_replace('/^Kabar\s+Baik:\s*(.*?)\s*Normal\s*Kembali$/ui', 'Kabar Baik: $1 Pulih', $title);
             $ticketCode = $data['ticket_code'] ?? null;
+            $submissionTitle = $data['submission_title'] ?? null;
             $message = ! empty($data['notes'])
                 ? ('Catatan Admin: "'.strip_tags($data['notes']).'"')
                 : ($data['message'] ?? 'Status pengajuan Anda telah diperbarui.');
 
+            $isSuccess = in_array($event, ['disetujui', 'selesai', 'videotron_recovered']) || str_contains($title, 'Disetujui') || str_contains($title, 'Selesai') || str_contains($title, 'Selesai Diperbaiki');
+            $isDanger = in_array($event, ['ditolak', 'videotron_disruption']) || str_contains($title, 'Ditolak') || str_contains($title, 'Batal') || str_contains($title, 'Kendala') || str_contains($title, 'Gangguan');
+
             $type = match (true) {
-                in_array($event, ['disetujui', 'selesai', 'videotron_recovered']) || str_contains($title, 'Disetujui') || str_contains($title, 'Selesai') || str_contains($title, 'Selesai Diperbaiki') => 'success',
-                in_array($event, ['ditolak', 'videotron_disruption']) || str_contains($title, 'Ditolak') || str_contains($title, 'Kendala') || str_contains($title, 'Gangguan') => 'error',
+                $isSuccess => 'success',
+                $isDanger => 'error',
                 default => 'info',
             };
 
-            $notificationsList[] = [
+            $typeClass = match (true) {
+                $isDanger => 'is-danger',
+                $isSuccess => 'is-success',
+                default => 'is-info',
+            };
+
+            $isUnread = is_null($notif->read_at);
+
+            $item = [
                 'id' => (string) $notif->id,
                 'title' => $title,
                 'message' => $message,
                 'ticket_code' => $ticketCode,
+                'submission_title' => $submissionTitle,
                 'event' => $event,
                 'type' => $type,
+                'type_class' => $typeClass,
+                'is_unread' => $isUnread,
                 'url' => route('notifikasi.read', $notif->id),
+                'delete_url' => route('notifikasi.destroy', $notif->id),
                 'batch_id' => $data['batch_id'] ?? null,
                 'videotron_name' => $data['videotron_name'] ?? null,
                 'age_seconds' => $notif->created_at ? (int) max(0, $notif->created_at->diffInSeconds(now(), true)) : null,
                 'created_at' => $notif->created_at?->toISOString(),
                 'time_ago' => $notif->created_at ? $notif->created_at->locale('id')->diffForHumans() : 'Baru saja',
             ];
+
+            $drawerNotifications[] = $item;
+
+            if ($isUnread && count($notificationsList) < 10) {
+                $notificationsList[] = $item;
+            }
         }
 
         return response()->json([
             'unread_count' => $unreadCount,
+            'total_count' => $totalCount,
             'notifications' => $notificationsList,
+            'drawer_notifications' => $drawerNotifications,
             'latest' => $notificationsList[0] ?? null,
             'notifications_url' => route('pengajuan.index', ['notif_drawer' => 1]),
             'server_time' => now()->toISOString(),

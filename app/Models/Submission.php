@@ -122,7 +122,7 @@ class Submission extends Model
     public function videotrons(): BelongsToMany
     {
         return $this->belongsToMany(Videotron::class, 'submission_videotron')
-            ->withPivot('playback_status')
+            ->withPivot(['playback_status', 'taken_down_at', 'taken_down_by'])
             ->withTimestamps();
     }
 

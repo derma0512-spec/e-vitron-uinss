@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\VideotronResource\Pages;
 
 use App\Filament\Resources\VideotronResource;
+use App\Models\Videotron;
 use Filament\Actions;
 use Filament\Actions\StaticAction;
 use Filament\Resources\Pages\ListRecords;
@@ -13,6 +14,20 @@ use Illuminate\Support\HtmlString;
 class ListVideotrons extends ListRecords
 {
     protected static string $resource = VideotronResource::class;
+
+    public function mount(): void
+    {
+        parent::mount();
+
+        $inspectId = request()->query('inspect');
+        if (blank($this->defaultTableAction) && is_numeric($inspectId)) {
+            $videotron = Videotron::find((int) $inspectId);
+            if ($videotron) {
+                $this->defaultTableAction = 'inspect_broadcasts';
+                $this->defaultTableActionRecord = (string) $videotron->getKey();
+            }
+        }
+    }
 
     protected function applyGlobalSearchToTableQuery(Builder $query): Builder
     {
@@ -45,7 +60,7 @@ class ListVideotrons extends ListRecords
 
     public function getSubheading(): ?string
     {
-        return 'Pantau status operasional, lokasi, resolusi, dan kondisi fisik layar videotron.';
+        return 'Kelola perangkat videotron dan klik baris untuk melihat konten tayang hari ini.';
     }
 
     public function getBreadcrumbs(): array

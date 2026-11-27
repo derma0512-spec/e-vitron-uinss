@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\AdminAccountService;
 use App\Services\BridgeSSOService;
 use Filament\Notifications\Actions\Action as NotificationAction;
 use Filament\Notifications\Notification as FilamentNotification;
@@ -11,7 +12,10 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Throwable;
 
 class AuthController extends Controller
@@ -22,21 +26,25 @@ class AuthController extends Controller
     public function showLogin(): Response|RedirectResponse
     {
         if (Auth::check()) {
-            if (Auth::user()->role === 'admin') {
+            /** @var User $currentUser */
+            $currentUser = Auth::user();
+
+            if ($currentUser->isActiveAdmin()) {
                 return redirect('/admin');
             }
 
-            return redirect()->route('home');
+            if ($currentUser->isAdmin()) {
+                Auth::logout();
+            } else {
+                return redirect()->route('home');
+            }
         }
 
         return response()
             ->view('auth.login')
             ->header('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate')
             ->header('Pragma', 'no-cache')
-            ->header('Expires', 'Sun, 02 Jan 1990 00:00:00 GMT')
-            ->header('X-Frame-Options', 'SAMEORIGIN')
-            ->header('X-Content-Type-Options', 'nosniff')
-            ->header('Referrer-Policy', 'strict-origin-when-cross-origin');
+            ->header('Expires', 'Sun, 02 Jan 1990 00:00:00 GMT');
     }
 
     /**
@@ -45,21 +53,25 @@ class AuthController extends Controller
     public function showRegister(): Response|RedirectResponse
     {
         if (Auth::check()) {
-            if (Auth::user()->role === 'admin') {
+            /** @var User $currentUser */
+            $currentUser = Auth::user();
+
+            if ($currentUser->isActiveAdmin()) {
                 return redirect('/admin');
             }
 
-            return redirect()->route('home');
+            if ($currentUser->isAdmin()) {
+                Auth::logout();
+            } else {
+                return redirect()->route('home');
+            }
         }
 
         return response()
             ->view('auth.register')
             ->header('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate')
             ->header('Pragma', 'no-cache')
-            ->header('Expires', 'Sun, 02 Jan 1990 00:00:00 GMT')
-            ->header('X-Frame-Options', 'SAMEORIGIN')
-            ->header('X-Content-Type-Options', 'nosniff')
-            ->header('Referrer-Policy', 'strict-origin-when-cross-origin');
+            ->header('Expires', 'Sun, 02 Jan 1990 00:00:00 GMT');
     }
 
     /**
@@ -91,7 +103,7 @@ class AuthController extends Controller
             'unit_or_prodi' => 'required|string|max:150',
             'email' => 'required|email|max:100|unique:users,email',
             'phone' => ['required', 'string', 'min:9', 'max:20', 'regex:/^([0-9\s\-\+\(\)]*)$/'],
-            'password' => 'required|string|min:6|confirmed',
+            'password' => 'required|string|min:8|confirmed',
         ], [
             'name.required' => 'Nama lengkap wajib diisi.',
             'unit_or_prodi.required' => 'Nama instansi atau unit kerja wajib diisi.',
@@ -102,7 +114,7 @@ class AuthController extends Controller
             'phone.min' => 'Nomor WhatsApp minimal 9 digit.',
             'phone.regex' => 'Format nomor WhatsApp hanya boleh berisi angka.',
             'password.required' => 'Password wajib diisi.',
-            'password.min' => 'Password minimal 6 karakter.',
+            'password.min' => 'Password minimal 8 karakter.',
             'password.confirmed' => 'Konfirmasi password tidak sesuai.',
         ]);
 
@@ -124,7 +136,7 @@ class AuthController extends Controller
         ]);
 
         try {
-            $admins = User::where('role', 'admin')->get();
+            $admins = User::activeAdmins()->get();
             foreach ($admins as $admin) {
                 $notif = FilamentNotification::make()
                     ->title('Pendaftaran Akun Baru')
@@ -157,6 +169,12 @@ class AuthController extends Controller
      */
     public function login(Request $request): RedirectResponse
     {
+        if (filled($request->input('website'))) {
+            return back()
+                ->withInput($request->only('identifier'))
+                ->with('error', 'Username atau password salah.');
+        }
+
         $request->validate([
             'identifier' => 'required|string',
             'password' => 'required|string',
@@ -178,7 +196,13 @@ class AuthController extends Controller
                     ->with('error', 'Username atau password salah.');
             }
 
-            if ($userByEmail->role !== 'admin') {
+            if ($userByEmail->role === 'admin') {
+                if (! $userByEmail->isApproved()) {
+                    return back()
+                        ->withInput($request->only('identifier'))
+                        ->with('error', 'Akun admin Anda sedang dinonaktifkan. Silakan hubungi Admin Utama (PUSTIKOM) untuk informasi lebih lanjut.');
+                }
+            } else {
                 if (($userByEmail->account_status ?? 'approved') === 'pending') {
                     return back()
                         ->withInput($request->only('identifier'))
@@ -257,7 +281,7 @@ class AuthController extends Controller
                             'avatar_url' => $profileData['avatar_url'] ?? null,
                             'phone' => $profileData['phone'],
                             'auth_type' => 'campus_sso',
-                            'password' => Hash::make($password),
+                            'password' => Hash::make(Str::random(40)),
                         ]);
                     } else {
                         $user->name = $profileData['name'] ?: $user->name;
@@ -269,7 +293,7 @@ class AuthController extends Controller
                             $user->phone = $profileData['phone'];
                         }
                         $user->auth_type = 'campus_sso';
-                        $user->password = Hash::make($password);
+                        $user->password = Hash::make(Str::random(40));
                         $user->save();
                     }
 
@@ -281,12 +305,13 @@ class AuthController extends Controller
                     return redirect()->route('home')->with('success', 'Selamat datang, '.$user->name.'!');
                 }
 
-                // Fallback ke akun lokal jika SSO mengembalikan kredensial salah atau koneksi error
+                // Fallback hanya untuk akun pemohon lokal (bukan akun campus_sso yang dikelola SSO kampus)
                 $localUser = User::where('identifier', $input)
                     ->whereIn('role', ['mahasiswa', 'dosen'])
+                    ->where('auth_type', 'local')
                     ->first();
 
-                if ($localUser && Hash::check($password, $localUser->password)) {
+                if ($localUser && $localUser->isApproved() && Hash::check($password, $localUser->password)) {
                     Auth::login($localUser, $request->boolean('remember'));
                     $request->session()->regenerate();
 
@@ -307,7 +332,7 @@ class AuthController extends Controller
                 ->whereIn('role', ['mahasiswa', 'dosen'])
                 ->first();
 
-            if (! $pengaju || ! Hash::check($password, $pengaju->password)) {
+            if (! $pengaju || ! $pengaju->isApproved() || ! Hash::check($password, $pengaju->password)) {
                 return back()
                     ->withInput($request->only('identifier'))
                     ->with('error', 'Username atau password salah.');
@@ -347,20 +372,26 @@ class AuthController extends Controller
      */
     public function changePassword(Request $request): JsonResponse
     {
+        /** @var User $user */
+        $user = Auth::user();
+
+        if (AdminAccountService::isProtectedDemoAdmin($user)) {
+            return response()->json([
+                'message' => 'Akun Admin demo tidak dapat diubah password-nya selama mode demo aktif agar tetap dapat diakses penguji lain.',
+            ], 403);
+        }
+
         $request->validate([
             'current_password' => 'required|string',
-            'new_password' => 'required|string|min:6|confirmed',
+            'new_password' => 'required|string|min:8|confirmed',
             'new_password_confirmation' => 'required|string',
         ], [
             'current_password.required' => 'Password saat ini wajib diisi.',
             'new_password.required' => 'Password baru wajib diisi.',
-            'new_password.min' => 'Password baru minimal harus 6 karakter.',
+            'new_password.min' => 'Password baru minimal harus 8 karakter.',
             'new_password.confirmed' => 'Konfirmasi password baru tidak cocok.',
             'new_password_confirmation.required' => 'Konfirmasi password baru wajib diisi.',
         ]);
-
-        /** @var User $user */
-        $user = Auth::user();
 
         if (! Hash::check($request->current_password, $user->password)) {
             return response()->json([
@@ -372,7 +403,20 @@ class AuthController extends Controller
         }
 
         $user->password = Hash::make($request->new_password);
+        $user->setRememberToken(Str::random(60));
         $user->save();
+
+        $request->session()->regenerate();
+
+        if (config('session.driver') === 'database') {
+            $sessionTable = (string) config('session.table', 'sessions');
+            if (Schema::hasTable($sessionTable)) {
+                DB::table($sessionTable)
+                    ->where('user_id', $user->id)
+                    ->where('id', '!=', $request->session()->getId())
+                    ->delete();
+            }
+        }
 
         return response()->json([
             'success' => true,

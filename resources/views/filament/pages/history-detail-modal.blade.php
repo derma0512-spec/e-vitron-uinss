@@ -24,31 +24,93 @@
 
 <div style="display: flex; flex-direction: column; gap: 1rem; color: #1E293B;">
 
-    {{-- 0. Status Banner Arsip --}}
+    {{-- 0. Status Banner Arsip & Konfirmasi Penurunan --}}
     @if($submission->display_status === 'selesai')
-        <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 0.75rem; padding: 0.75rem 0.95rem; display: flex; align-items: flex-start; gap: 0.65rem;">
-            <div style="width: 24px; height: 24px; border-radius: 50%; background: #DCFCE7; color: #16A34A; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">
-                <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                </svg>
-            </div>
-            <div style="min-width: 0; flex: 1;">
-                <div style="font-size: 0.8125rem; font-weight: 800; color: #166534; line-height: 1.2;">
-                    Masa Tayang Selesai
-                </div>
-                <div style="font-size: 0.71875rem; color: #15803D; margin-top: 3px; line-height: 1.4;">
-                    Materi telah selesai disiarkan sesuai periode jadwal dan diarsipkan secara aman.
-                </div>
-                @if($submission->material_downloaded_at)
-                    <div style="font-size: 0.6875rem; color: #047857; margin-top: 6px; padding-top: 5px; border-top: 1px dashed #A7F3D0; display: flex; align-items: center; gap: 4px;">
-                        <svg style="width: 12px; height: 12px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        @php
+            $resolvedAdmins = $takedownAdmins ?? ((isset($this) && method_exists($this, 'getTakedownAdminNamesProperty')) ? $this->takedownAdminNames : []);
+            $hasTargetScreens = $submission->videotrons->isNotEmpty();
+            $needsTakedown = $hasTargetScreens && $submission->videotrons->contains(fn ($vt) => empty($vt->pivot?->taken_down_at));
+            $isTakenDown = $hasTargetScreens && ! $needsTakedown;
+            $latestTakenPivot = $isTakenDown
+                ? $submission->videotrons->sortByDesc(fn ($vt) => $vt->pivot?->taken_down_at)->first()?->pivot
+                : null;
+            $takenByName = $latestTakenPivot?->taken_down_by
+                ? ($resolvedAdmins[(int) $latestTakenPivot->taken_down_by] ?? 'Admin')
+                : 'Admin';
+            $takenAtFull = $latestTakenPivot?->taken_down_at
+                ? \Carbon\Carbon::parse($latestTakenPivot->taken_down_at)->timezone('Asia/Jakarta')->locale('id')->translatedFormat('d M Y, H:i').' WIB'
+                : null;
+        @endphp
+
+        @if($needsTakedown)
+            <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 0.75rem; padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.65rem;">
+                <div style="display: flex; align-items: flex-start; gap: 0.65rem;">
+                    <div style="width: 24px; height: 24px; border-radius: 50%; background: #FEF3C7; color: #D97706; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">
+                        <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <span>Materi diunduh pada <strong>{{ $submission->material_downloaded_at->locale('id')->translatedFormat('d M Y, H:i') }} WIB</strong> oleh {{ $submission->materialDownloader?->name ?? 'Admin' }}</span>
                     </div>
-                @endif
+                    <div style="min-width: 0; flex: 1;">
+                        <div style="font-size: 0.8125rem; font-weight: 800; color: #92400E; line-height: 1.25;">
+                            Masa Tayang Selesai &mdash; Perlu Diturunkan
+                        </div>
+                        <div style="font-size: 0.71875rem; color: #B45309; margin-top: 3px; line-height: 1.45;">
+                            Jadwal tayang berakhir pada <strong>{{ $submission->end_date?->locale('id')->translatedFormat('d M Y') ?? '-' }}</strong>. Konfirmasi setelah materi diturunkan dari layar videotron fisik.
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: flex-end; padding-top: 0.5rem; border-top: 1px dashed #FCD34D;">
+                    <button
+                        type="button"
+                        wire:click="markSubmissionTakenDown({{ $submission->id }})"
+                        wire:confirm="Tandai konten tiket {{ $submission->ticket_code }} sudah diturunkan? Pastikan materi benar-benar sudah dihapus dari layar videotron fisik. Tindakan ini bersifat final dan akan mencatat nama Anda."
+                        wire:loading.attr="disabled"
+                        wire:target="markSubmissionTakenDown({{ $submission->id }})"
+                        class="sipetron-takedown-btn"
+                        style="padding: 0.4rem 0.8rem; font-size: 0.75rem;"
+                    >
+                        <span class="sipetron-takedown-checkbox" wire:loading.remove wire:target="markSubmissionTakenDown({{ $submission->id }})"></span>
+                        <svg wire:loading wire:target="markSubmissionTakenDown({{ $submission->id }})" class="animate-spin" style="width: 13px; height: 13px; color: #0F3D2E; flex-shrink: 0;" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="9" stroke="#CBD5E1" stroke-width="2.5"></circle>
+                            <path d="M12 3a9 9 0 0 1 9 9" stroke="#0F3D2E" stroke-width="2.5" stroke-linecap="round"></path>
+                        </svg>
+                        <span>Tandai Sudah Diturunkan</span>
+                    </button>
+                </div>
             </div>
-        </div>
+        @else
+            <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 0.75rem; padding: 0.75rem 0.95rem; display: flex; align-items: flex-start; gap: 0.65rem;">
+                <div style="width: 24px; height: 24px; border-radius: 50%; background: #DCFCE7; color: #16A34A; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">
+                    <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    </svg>
+                </div>
+                <div style="min-width: 0; flex: 1;">
+                    <div style="font-size: 0.8125rem; font-weight: 800; color: #166534; line-height: 1.2;">
+                        Masa Tayang Selesai
+                    </div>
+                    <div style="font-size: 0.71875rem; color: #15803D; margin-top: 3px; line-height: 1.4;">
+                        Materi telah selesai disiarkan sesuai periode jadwal dan diarsipkan secara aman.
+                    </div>
+                    @if($isTakenDown)
+                        <div style="font-size: 0.6875rem; color: #065F46; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #A7F3D0; display: flex; align-items: center; gap: 4px;">
+                            <svg style="width: 12px; height: 12px; color: #16A34A; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span>Diturunkan pada <strong>{{ $takenAtFull }}</strong> oleh <strong>{{ $takenByName }}</strong></span>
+                        </div>
+                    @endif
+                    @if($submission->material_downloaded_at)
+                        <div style="font-size: 0.6875rem; color: #047857; margin-top: 6px; padding-top: 5px; border-top: 1px dashed #A7F3D0; display: flex; align-items: center; gap: 4px;">
+                            <svg style="width: 12px; height: 12px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            <span>Materi diunduh pada <strong>{{ $submission->material_downloaded_at->locale('id')->translatedFormat('d M Y, H:i') }} WIB</strong> oleh {{ $submission->materialDownloader?->name ?? 'Admin' }}</span>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        @endif
     @elseif($submission->display_status === 'ditolak')
         <div style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 0.75rem; padding: 0.75rem 0.95rem;">
             <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.78125rem; font-weight: 800; color: #991B1B; margin-bottom: 0.3rem;">
@@ -315,11 +377,11 @@
             {{-- Daftar Videotron --}}
             <div style="display: flex; flex-direction: column; gap: 0.35rem;">
                 @forelse($submission->videotrons as $v)
-                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.65rem; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 0.5rem; font-size: 0.75rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.45rem 0.65rem; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 0.5rem; font-size: 0.75rem;">
                         <div style="display: flex; align-items: center; gap: 0.45rem; min-width: 0;">
                             <span style="width: 0.45rem; height: 0.45rem; border-radius: 9999px; background: {{ $v->condition === 'normal' && $v->is_active ? '#10B981' : '#F59E0B' }}; flex-shrink: 0;" title="{{ $v->condition === 'normal' && $v->is_active ? 'Perangkat Siap & Normal' : 'Dalam Perawatan' }}"></span>
                             <span style="font-weight: 700; color: #0F172A;">{{ $v->name }}</span>
-                            <span style="color: #64748B; font-size: 0.6875rem;">({{ $v->location }})</span>
+                            <span style="color: #64748B; font-size: 0.6875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">({{ $v->location }})</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0;">
                             <span style="font-size: 0.6875rem; color: #475569; font-family: monospace; background: #F1F5F9; padding: 1px 5px; border-radius: 4px;">

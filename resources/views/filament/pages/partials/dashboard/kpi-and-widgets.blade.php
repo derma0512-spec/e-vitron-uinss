@@ -76,6 +76,42 @@
         </a>
     </div>
 
+    {{-- Banner Pengingat Tipis: Hanya Tampil Jika Ada Video Habis Masa Tayang Belum Diturunkan --}}
+    @if(($pendingTakedownCount ?? 0) > 0)
+        <a
+            href="{{ route('filament.admin.pages.history-and-recap', ['filterStatus' => 'perlu_diturunkan']) }}"
+            class="sipetron-takedown-bar"
+        >
+            <div style="display: flex; align-items: center; gap: 0.75rem; min-width: 0; flex: 1 1 280px;">
+                <div class="sipetron-stat-icon" style="width: 2.15rem; height: 2.15rem; min-width: 2.15rem; background: #FEF3C7; color: #D97706; box-shadow: 0 2px 6px rgba(217, 119, 6, 0.15);">
+                    <svg style="width: 1.05rem; height: 1.05rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div style="min-width: 0;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                        <span style="font-size: 0.875rem; font-weight: 700; color: #0F172A; line-height: 1.25;">
+                            Pengingat Penurunan Konten
+                        </span>
+                        <span style="font-size: 0.6875rem; font-weight: 700; color: #B45309; background: #FEF3C7; border: 1px solid #FDE68A; padding: 0.08rem 0.55rem; border-radius: 9999px; line-height: 1.3; white-space: nowrap;">
+                            {{ $pendingTakedownCount }} Video
+                        </span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: #64748B; margin-top: 0.12rem; line-height: 1.35;">
+                        Masa tayang telah berakhir dan belum dikonfirmasi diturunkan dari layar videotron fisik.
+                    </div>
+                </div>
+            </div>
+            <span
+                class="sipetron-btn-secondary"
+                style="flex-shrink: 0; white-space: nowrap;"
+            >
+                <span>Buka Checklist</span>
+                <span class="arrow-right">&rsaquo;</span>
+            </span>
+        </a>
+    @endif
+
     {{-- Baris 2: Tren Pengajuan (Kiri, 1.8) & Jadwal Tayang Terdekat (Kanan, 1.2) --}}
     <div class="sipetron-grid-charts">
         <div style="height: 100%; min-width: 0;">
@@ -239,11 +275,14 @@
                             };
                             $isActive = $v->is_active && ($v->condition === 'normal' || empty($v->condition));
                         @endphp
-                        <a 
-                            href="{{ route('filament.admin.resources.videotrons.index', ['tableSearch' => $v->name]) }}" 
-                            class="sipetron-device-chip" 
-                            style="height: 100%; min-height: 2.75rem; width: 100%; box-sizing: border-box; text-decoration: none; cursor: pointer;" 
-                            title="Klik untuk kelola {{ $v->name }} (Status: {{ $statusInfo['label'] }})"
+                        @php
+                            $activeCount = (int) ($v->active_broadcasts_count ?? 0);
+                        @endphp
+                        <a
+                            href="{{ route('filament.admin.resources.videotrons.index', ['tableSearch' => $v->name, 'tableAction' => 'inspect_broadcasts', 'tableActionRecord' => $v->id]) }}"
+                            class="sipetron-device-chip"
+                            style="height: 100%; min-height: 2.75rem; width: 100%; box-sizing: border-box; text-decoration: none; cursor: pointer;"
+                            title="Klik untuk melihat video yang seharusnya tayang hari ini di {{ $v->name }} ({{ $activeCount > 0 ? $activeCount.' tayang' : 'Kosong' }})"
                         >
                             <span class="sipetron-chip-dot {{ $isActive ? 'sipetron-status-pulse' : '' }}" style="background: {{ $statusInfo['dot'] }};"></span>
                             <div style="min-width: 0; flex: 1;">
@@ -253,8 +292,13 @@
                                         {{ $statusInfo['label'] }}
                                     </span>
                                 </div>
-                                <div class="sipetron-chip-loc">
-                                    {{ $v->location }}
+                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.35rem; margin-top: 0.1rem;">
+                                    <div class="sipetron-chip-loc" style="margin: 0; flex: 1; min-width: 0;">
+                                        {{ $v->location }}
+                                    </div>
+                                    <span style="font-size: 0.59375rem; font-weight: 700; color: {{ $activeCount > 0 ? '#0F3D2E' : '#94A3B8' }}; white-space: nowrap; flex-shrink: 0;">
+                                        {{ $activeCount > 0 ? $activeCount.' tayang' : 'Kosong' }}
+                                    </span>
                                 </div>
                             </div>
                         </a>

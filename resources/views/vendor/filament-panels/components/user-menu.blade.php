@@ -3,7 +3,7 @@
     $name = $user?->name ?? 'Admin E-VITRON';
     $email = $user?->email ?? 'admin@uin.ac.id';
     $role = $user?->role ?? 'admin';
-    $roleLabel = $role === 'admin' ? 'Administrator' : ($role === 'pengaju' ? 'Pengaju' : 'Pengguna');
+    $roleLabel = $user?->isAdmin() ? $user->adminRoleLabel() : ($role === 'pengaju' ? 'Pengaju' : 'Pengguna');
     
     $cleanWords = array_values(array_filter(explode(' ', trim($name))));
     $initials = 'AP';

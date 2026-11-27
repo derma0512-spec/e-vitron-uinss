@@ -266,6 +266,8 @@
         (function () {
           const checkUrl = '{{ route('notifikasi.checkUnread') }}';
           let isFirstPoll = true;
+          let lastPollAt = 0;
+          let lastDrawerSignature = null;
           let shownToasts = [];
           try {
             shownToasts = JSON.parse(sessionStorage.getItem('sipetron_shown_toast_ids') || '[]');
@@ -273,7 +275,182 @@
             shownToasts = [];
           }
 
-          async function pollUnread() {
+          function escapeNotifHtml(value) {
+            return String(value == null ? '' : value)
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#39;');
+          }
+
+          function getDrawerIconSvg(typeClass) {
+            if (typeClass === 'is-success') {
+              return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>';
+            }
+            if (typeClass === 'is-danger') {
+              return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+            }
+            return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>';
+          }
+
+          function renderEmptyDrawerState() {
+            return `
+              <div class="flex flex-col items-center justify-center py-20 px-4 text-center">
+                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 mb-3">
+                  <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                  </svg>
+                </div>
+                <p class="text-sm font-bold text-slate-700">Tidak Ada Notifikasi</p>
+                <p class="text-xs text-slate-400 mt-1 max-w-[220px]">Pemberitahuan pembaruan pengajuan videotron Anda akan muncul di sini.</p>
+              </div>
+            `;
+          }
+
+          function syncDrawerList(data) {
+            const listContainer = document.getElementById('notif-drawer-list');
+            if (!listContainer || !Array.isArray(data.drawer_notifications)) {
+              return;
+            }
+
+            const items = data.drawer_notifications;
+            const totalCount = typeof data.total_count === 'number' ? data.total_count : items.length;
+            const unreadCount = parseInt(data.unread_count || 0, 10);
+
+            // Sinkronkan visibilitas bar aksi header drawer
+            const actionsBar = document.getElementById('notif-actions-bar');
+            const markReadForm = document.getElementById('form-mark-all-read');
+            const clearAllForm = document.getElementById('form-clear-all');
+            if (actionsBar) {
+              if (totalCount > 0) {
+                actionsBar.style.setProperty('display', '', '');
+                actionsBar.classList.remove('is-hidden');
+              } else {
+                actionsBar.style.setProperty('display', 'none', 'important');
+                actionsBar.classList.add('is-hidden');
+              }
+            }
+            if (markReadForm) {
+              if (unreadCount > 0) {
+                markReadForm.style.setProperty('display', 'inline', '');
+                markReadForm.classList.remove('is-hidden');
+              } else {
+                markReadForm.style.setProperty('display', 'none', 'important');
+                markReadForm.classList.add('is-hidden');
+              }
+            }
+            if (clearAllForm) {
+              if (totalCount > 0) {
+                clearAllForm.style.setProperty('display', 'inline', '');
+                clearAllForm.classList.remove('is-hidden');
+              } else {
+                clearAllForm.style.setProperty('display', 'none', 'important');
+                clearAllForm.classList.add('is-hidden');
+              }
+            }
+
+            const signature = items.map(n => `${n.id}:${n.is_unread ? 1 : 0}:${n.time_ago || ''}`).join('|');
+            if (lastDrawerSignature === signature) {
+              return;
+            }
+            lastDrawerSignature = signature;
+
+            if (items.length === 0) {
+              listContainer.innerHTML = renderEmptyDrawerState();
+              return;
+            }
+
+            const html = items.map(n => {
+              const safeId = escapeNotifHtml(n.id);
+              const typeClass = ['is-success', 'is-danger', 'is-info'].includes(n.type_class) ? n.type_class : 'is-info';
+              const safeTitle = escapeNotifHtml(n.title || 'Pemberitahuan Status');
+              const safeDate = escapeNotifHtml(n.time_ago || 'Baru saja');
+              const safeTicket = escapeNotifHtml(n.ticket_code || '');
+              const safeActivity = escapeNotifHtml(n.submission_title || '');
+              const safeDesc = escapeNotifHtml(n.message || '');
+              const safeUrl = typeof n.url === 'string' && !/^\s*javascript:/i.test(n.url) ? escapeNotifHtml(n.url) : '#';
+              const safeDeleteUrl = typeof n.delete_url === 'string' && !/^\s*javascript:/i.test(n.delete_url) ? escapeNotifHtml(n.delete_url) : '';
+              const unreadAttr = n.is_unread ? 'true' : 'false';
+              const unreadDot = n.is_unread ? '<span class="sipetron-notif-unread-dot" aria-hidden="true"></span>' : '';
+              const row2 = (safeTicket || safeActivity)
+                ? `<div class="sipetron-notif-row-2">${safeTicket ? `<span class="sipetron-notif-pill ${typeClass}">${safeTicket}</span>` : ''}${safeActivity ? `<span class="sipetron-notif-activity-title" title="${safeActivity}">${safeActivity}</span>` : ''}</div>`
+                : '';
+              const descHtml = safeDesc ? `<p class="sipetron-notif-desc-text" title="${safeDesc}">${safeDesc}</p>` : '';
+
+              return `
+                <div id="notif-item-${safeId}" class="drawer-notif-item" data-unread="${unreadAttr}">
+                  <div class="sipetron-notif-card ${typeClass}" data-notif-url="${safeUrl}">
+                    <div class="sipetron-notif-icon-box ${typeClass}">${getDrawerIconSvg(typeClass)}</div>
+                    <div class="sipetron-notif-body-wrap">
+                      <div class="sipetron-notif-row-1">
+                        <h4 class="sipetron-notif-card-title">${safeTitle}</h4>
+                        <div class="sipetron-notif-meta-right">
+                          <span class="sipetron-notif-time-text">${safeDate}</span>
+                          ${unreadDot}
+                        </div>
+                      </div>
+                      ${row2}
+                      ${descHtml}
+                    </div>
+                    <div class="sipetron-notif-right-col" data-notif-right-col="true">
+                      <svg class="sipetron-notif-arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                      </svg>
+                      <button type="button"
+                              title="Hapus notifikasi ini"
+                              aria-label="Hapus notifikasi ini"
+                              class="sipetron-notif-del-btn"
+                              data-delete-id="${safeId}"
+                              data-delete-url="${safeDeleteUrl}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('');
+
+            listContainer.innerHTML = html;
+
+            listContainer.querySelectorAll('.sipetron-notif-card[data-notif-url]').forEach(card => {
+              card.addEventListener('click', function () {
+                const target = card.getAttribute('data-notif-url');
+                if (target && target !== '#') {
+                  window.location.href = target;
+                }
+              });
+            });
+
+            listContainer.querySelectorAll('[data-notif-right-col="true"]').forEach(col => {
+              col.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+              });
+            });
+
+            listContainer.querySelectorAll('.sipetron-notif-del-btn[data-delete-id]').forEach(btn => {
+              btn.addEventListener('click', function (ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                const id = btn.getAttribute('data-delete-id');
+                const delUrl = btn.getAttribute('data-delete-url');
+                if (id && delUrl && typeof window.deleteSingleNotif === 'function') {
+                  window.deleteSingleNotif(ev, id, delUrl);
+                }
+              });
+            });
+          }
+
+          async function pollUnread(force) {
+            const now = Date.now();
+            if (!force && (now - lastPollAt < 1500)) {
+              return;
+            }
+            lastPollAt = now;
+
             try {
               const res = await fetch(checkUrl, {
                 headers: {
@@ -308,11 +485,14 @@
               if (drawerBadge) {
                 if (data.unread_count > 0) {
                   drawerBadge.textContent = data.unread_count;
-                  drawerBadge.style.display = 'inline-flex';
+                  drawerBadge.style.setProperty('display', 'inline-flex', '');
                 } else {
-                  drawerBadge.style.display = 'none';
+                  drawerBadge.style.setProperty('display', 'none', 'important');
                 }
               }
+
+              // 3b. Sinkronkan isi daftar laci notifikasi tanpa perlu F5
+              syncDrawerList(data);
 
               // 4. Deteksi Notifikasi Baru Masuk & Munculkan Floating Toast
               // ATURAN PROFESIONAL & BERSIH:
@@ -394,21 +574,27 @@
             }
           }
 
-          // Panggil langsung seketika halaman dibuka
-          pollUnread();
+          window.pollPortalNotifications = pollUnread;
 
-          // Polling berkala setiap 15 detik (hanya saat tab aktif/terlihat agar tidak membebani worker PHP di background)
+          // Panggil langsung seketika halaman dibuka
+          pollUnread(true);
+
+          // Polling berkala setiap 10 detik (hanya saat tab aktif/terlihat agar tidak membebani worker PHP di background)
           setInterval(function () {
             if (document.visibilityState === 'visible') {
-              pollUnread();
+              pollUnread(false);
             }
-          }, 15000);
+          }, 10000);
 
-          // Cek segera saat tab kembali dibuka/aktif
+          // Cek segera saat tab atau jendela browser kembali dibuka/aktif
           document.addEventListener('visibilitychange', function () {
             if (document.visibilityState === 'visible') {
-              pollUnread();
+              pollUnread(false);
             }
+          });
+
+          window.addEventListener('focus', function () {
+            pollUnread(false);
           });
         })();
         @endauth

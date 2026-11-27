@@ -44,8 +44,8 @@
                 this.$refs.newPasswordInput?.focus();
                 return;
             }
-            if (this.newPassword.length < 6) {
-                this.errorMessage = 'Password baru minimal harus 6 karakter.';
+            if (this.newPassword.length < 8) {
+                this.errorMessage = 'Password baru minimal harus 8 karakter.';
                 this.$refs.newPasswordInput?.focus();
                 return;
             }
@@ -213,7 +213,7 @@
                                         x-model="newPassword"
                                         x-ref="newPasswordInput"
                                         :disabled="loading"
-                                        placeholder="Minimal 6 karakter"
+                                        placeholder="Minimal 8 karakter"
                                         autocomplete="new-password"
                                         class="sipetron-cp-input"
                                     >
@@ -233,7 +233,7 @@
                                         </svg>
                                     </button>
                                 </div>
-                                <span class="sipetron-cp-hint">Disarankan kombinasi huruf dan angka minimal 6 karakter.</span>
+                                <span class="sipetron-cp-hint">Disarankan kombinasi huruf dan angka minimal 8 karakter.</span>
                             </div>
 
                             {{-- Field 3: Konfirmasi Password Baru --}}

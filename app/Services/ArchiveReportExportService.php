@@ -28,6 +28,7 @@ class ArchiveReportExportService
         $totalCanceled = $records->filter(fn (Submission $s) => $s->display_status === 'dibatalkan')->count();
 
         $statusLabel = match ($filterStatus) {
+            'perlu_diturunkan' => 'Perlu Diturunkan',
             'selesai' => 'Selesai Tayang',
             'ditolak' => 'Ditolak Admin',
             'dibatalkan' => 'Dibatalkan Pengaju',
@@ -122,9 +123,12 @@ class ArchiveReportExportService
         $totalRejected = $records->filter(fn (Submission $s) => $s->display_status === 'ditolak')->count();
         $totalCanceled = $records->filter(fn (Submission $s) => $s->display_status === 'dibatalkan')->count();
 
-        $statusLabel = filled($filterStatus)
-            ? Submission::getStatusLabel($filterStatus, 'admin')
-            : 'Semua Status Arsip';
+        $statusLabel = match ($filterStatus) {
+            'perlu_diturunkan' => 'Perlu Diturunkan',
+            default => filled($filterStatus)
+                ? Submission::getStatusLabel($filterStatus, 'admin')
+                : 'Semua Status Arsip',
+        };
         $searchLabel = filled($tableSearch) ? trim($tableSearch) : 'Semua (Tanpa Kata Kunci)';
         $exportedAt = now()->timezone('Asia/Jakarta')->locale('id')->translatedFormat('d F Y, H:i').' WIB';
 

@@ -4,8 +4,12 @@ namespace App\Filament\Pages;
 
 use App\Models\Submission;
 use App\Services\ArchiveReportExportService;
+use App\Services\VideotronPlaybackService;
 use Carbon\Carbon;
+use DomainException;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Livewire\WithPagination;
@@ -25,6 +29,23 @@ class HistoryAndRecap extends Page
 
     protected static string $view = 'filament.pages.history-and-recap';
 
+    public static function getNavigationBadge(): ?string
+    {
+        $count = app(VideotronPlaybackService::class)->countPendingTakedownSubmissions();
+
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'warning';
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return 'Video habis masa tayang yang perlu dikonfirmasi diturunkan dari layar';
+    }
+
     public function getHeading(): string
     {
         return 'Riwayat & Rekap';
@@ -32,7 +53,7 @@ class HistoryAndRecap extends Page
 
     public function getSubheading(): ?string
     {
-        return 'Arsip riwayat pengajuan yang telah selesai masa tayangnya, ditolak, atau dibatalkan.';
+        return 'Arsip pengajuan yang telah selesai tayang, checklist penurunan konten, serta rekap laporan.';
     }
 
     public function getBreadcrumbs(): array
@@ -73,11 +94,18 @@ class HistoryAndRecap extends Page
         'selectedSubmissionId' => ['as' => 'drawer', 'except' => null],
     ];
 
+    /**
+     * @var array<int, string>
+     */
+    public const ALLOWED_STATUS_FILTERS = ['perlu_diturunkan', 'selesai', 'ditolak', 'dibatalkan'];
+
     public function mount(): void
     {
         $statusParam = request()->query('filterStatus') ?: request()->query('status');
-        if (filled($statusParam)) {
+        if (filled($statusParam) && in_array((string) $statusParam, self::ALLOWED_STATUS_FILTERS, true)) {
             $this->filterStatus = (string) $statusParam;
+        } elseif (filled($this->filterStatus) && ! in_array((string) $this->filterStatus, self::ALLOWED_STATUS_FILTERS, true)) {
+            $this->filterStatus = '';
         }
 
         $perPageParam = request()->query('perPage');
@@ -119,6 +147,16 @@ class HistoryAndRecap extends Page
 
     public function updatedFilterStatus(): void
     {
+        if (filled($this->filterStatus) && ! in_array((string) $this->filterStatus, self::ALLOWED_STATUS_FILTERS, true)) {
+            $this->filterStatus = '';
+        }
+
+        $this->resetPage();
+    }
+
+    public function setFilterStatus(string $status): void
+    {
+        $this->filterStatus = in_array($status, self::ALLOWED_STATUS_FILTERS, true) ? $status : '';
         $this->resetPage();
     }
 
@@ -192,15 +230,20 @@ class HistoryAndRecap extends Page
      */
     public function getAvailableYearsProperty(): array
     {
+        $driver = Submission::query()->getConnection()->getDriverName();
+        $yearExpr = fn (string $column): string => $driver === 'sqlite'
+            ? "CAST(strftime('%Y', {$column}) AS INTEGER)"
+            : "YEAR({$column})";
+
         $bounds = Submission::query()
-            ->selectRaw('
-                MIN(YEAR(start_date)) as min_start,
-                MAX(YEAR(start_date)) as max_start,
-                MIN(YEAR(end_date)) as min_end,
-                MAX(YEAR(end_date)) as max_end,
-                MIN(YEAR(created_at)) as min_created,
-                MAX(YEAR(created_at)) as max_created
-            ')
+            ->selectRaw("
+                MIN({$yearExpr('start_date')}) as min_start,
+                MAX({$yearExpr('start_date')}) as max_start,
+                MIN({$yearExpr('end_date')}) as min_end,
+                MAX({$yearExpr('end_date')}) as max_end,
+                MIN({$yearExpr('created_at')}) as min_created,
+                MAX({$yearExpr('created_at')}) as max_created
+            ")
             ->first();
 
         $currentYear = (int) now()->format('Y');
@@ -289,9 +332,9 @@ class HistoryAndRecap extends Page
     }
 
     /**
-     * Rekap Statistik untuk Kartu Atas
+     * Rekap Statistik untuk Filter Status & Pengingat Penurunan
      *
-     * @return array{total: int, completed: int, rejected: int, canceled: int}
+     * @return array{total: int, completed: int, rejected: int, canceled: int, pending_takedown: int}
      */
     public function getRecapStatsProperty(): array
     {
@@ -305,32 +348,49 @@ class HistoryAndRecap extends Page
             'completed' => $completed,
             'rejected' => $rejected,
             'canceled' => $canceled,
+            'pending_takedown' => app(VideotronPlaybackService::class)->countPendingTakedownSubmissions(),
         ];
+    }
+
+    protected function applyArchiveBaseQuery(Builder $query, string $today): Builder
+    {
+        return $query->where(function (Builder $q) use ($today): void {
+            $q->whereIn('status', ['selesai', 'ditolak', 'dibatalkan'])
+                ->orWhere(function (Builder $sq) use ($today): void {
+                    $sq->where('status', 'disetujui')
+                        ->whereDate('end_date', '<', $today);
+                });
+        });
+    }
+
+    protected function applyArchiveStatusFilter(Builder $query, string $today): Builder
+    {
+        if (! filled($this->filterStatus)) {
+            return $query;
+        }
+
+        $playbackService = app(VideotronPlaybackService::class);
+
+        if ($this->filterStatus === 'perlu_diturunkan') {
+            return $playbackService->applyPendingTakedownSubmissionConstraints($query, $today);
+        }
+
+        if ($this->filterStatus === 'selesai') {
+            return $playbackService->applyExpiredBroadcastConstraints($query, $today);
+        }
+
+        if (in_array($this->filterStatus, ['ditolak', 'dibatalkan'], true)) {
+            return $query->where('status', $this->filterStatus);
+        }
+
+        return $query;
     }
 
     public function getTotalFilteredCountProperty(): int
     {
-        $query = Submission::query()->where(function ($q) {
-            $q->whereIn('status', ['selesai', 'ditolak', 'dibatalkan'])
-                ->orWhere(function ($sq) {
-                    $sq->where('status', 'disetujui')
-                        ->whereDate('end_date', '<', today());
-                });
-        });
-
-        if (filled($this->filterStatus)) {
-            if ($this->filterStatus === 'selesai') {
-                $query->where(function ($sq) {
-                    $sq->where('status', 'selesai')
-                        ->orWhere(function ($ssq) {
-                            $ssq->where('status', 'disetujui')
-                                ->whereDate('end_date', '<', today());
-                        });
-                });
-            } else {
-                $query->where('status', $this->filterStatus);
-            }
-        }
+        $today = app(VideotronPlaybackService::class)->todayDate();
+        $query = $this->applyArchiveBaseQuery(Submission::query(), $today);
+        $this->applyArchiveStatusFilter($query, $today);
 
         $this->applyPeriodQueryConstraint($query);
 
@@ -419,27 +479,9 @@ class HistoryAndRecap extends Page
 
     protected function getFilteredArchiveRecords(): Collection
     {
-        $query = Submission::query()->with(['videotrons', 'user'])->where(function ($q) {
-            $q->whereIn('status', ['selesai', 'ditolak', 'dibatalkan'])
-                ->orWhere(function ($sq) {
-                    $sq->where('status', 'disetujui')
-                        ->whereDate('end_date', '<', today());
-                });
-        });
-
-        if (filled($this->filterStatus)) {
-            if ($this->filterStatus === 'selesai') {
-                $query->where(function ($sq) {
-                    $sq->where('status', 'selesai')
-                        ->orWhere(function ($ssq) {
-                            $ssq->where('status', 'disetujui')
-                                ->whereDate('end_date', '<', today());
-                        });
-                });
-            } else {
-                $query->where('status', $this->filterStatus);
-            }
-        }
+        $today = app(VideotronPlaybackService::class)->todayDate();
+        $query = $this->applyArchiveBaseQuery(Submission::query()->with(['videotrons', 'user']), $today);
+        $this->applyArchiveStatusFilter($query, $today);
 
         $this->applyPeriodQueryConstraint($query);
 
@@ -488,6 +530,73 @@ class HistoryAndRecap extends Page
         $this->fromNotification = false;
     }
 
+    public function markSubmissionTakenDown(int $submissionId): void
+    {
+        $admin = auth()->user();
+        abort_unless($admin?->isAdmin(), 403);
+
+        $submission = Submission::find($submissionId);
+        if (! $submission) {
+            return;
+        }
+
+        try {
+            $service = app(VideotronPlaybackService::class);
+            $count = $service->markAllVideotronsTakenDown($submission, $admin);
+            if ($count > 0) {
+                if ($this->filterStatus === 'perlu_diturunkan') {
+                    $lastPage = max(1, (int) ceil($this->totalFilteredCount / max(1, $this->perPage)));
+                    if ($this->getPage() > $lastPage) {
+                        $this->setPage($lastPage);
+                    }
+                }
+
+                $this->dispatch('sipetron:takedown-count-updated', count: $service->countPendingTakedownSubmissions());
+                unset($this->selectedSubmission, $this->takedownAdminNames);
+
+                Notification::make()
+                    ->title('Konten Ditandai Sudah Diturunkan')
+                    ->body("Tiket {$submission->ticket_code} ditandai sudah diturunkan oleh {$admin->name}.")
+                    ->success()
+                    ->send();
+            }
+        } catch (DomainException $e) {
+            Notification::make()
+                ->title('Gagal Memperbarui Status Penurunan')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+
+    /**
+     * Memetakan user_id -> nama admin untuk seluruh baris yang tampil dan drawer terpilih (1 query, bebas N+1).
+     *
+     * @param  iterable<int, Submission>  $submissions
+     * @return array<int, string>
+     */
+    public function resolveTakedownAdminNames(iterable $submissions, ?Submission $selected = null): array
+    {
+        $items = collect($submissions);
+        if ($selected) {
+            $items->push($selected);
+        }
+
+        return app(VideotronPlaybackService::class)->resolveAdminNamesForSubmissions($items);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function getTakedownAdminNamesProperty(): array
+    {
+        if (! $this->selectedSubmission) {
+            return [];
+        }
+
+        return app(VideotronPlaybackService::class)->resolveAdminNamesForSubmissions([$this->selectedSubmission]);
+    }
+
     public function getSelectedSubmissionProperty(): ?Submission
     {
         if (! $this->selectedSubmissionId) {
@@ -507,27 +616,9 @@ class HistoryAndRecap extends Page
                 ->paginate(1);
         }
 
-        $query = Submission::query()->with(['videotrons', 'user'])->where(function ($q) {
-            $q->whereIn('status', ['selesai', 'ditolak', 'dibatalkan'])
-                ->orWhere(function ($sq) {
-                    $sq->where('status', 'disetujui')
-                        ->whereDate('end_date', '<', today());
-                });
-        });
-
-        if (filled($this->filterStatus)) {
-            if ($this->filterStatus === 'selesai') {
-                $query->where(function ($sq) {
-                    $sq->where('status', 'selesai')
-                        ->orWhere(function ($ssq) {
-                            $ssq->where('status', 'disetujui')
-                                ->whereDate('end_date', '<', today());
-                        });
-                });
-            } else {
-                $query->where('status', $this->filterStatus);
-            }
-        }
+        $today = app(VideotronPlaybackService::class)->todayDate();
+        $query = $this->applyArchiveBaseQuery(Submission::query()->with(['videotrons', 'user']), $today);
+        $this->applyArchiveStatusFilter($query, $today);
 
         $this->applyPeriodQueryConstraint($query);
 
@@ -541,6 +632,10 @@ class HistoryAndRecap extends Page
             });
         }
 
-        return $query->latest('updated_at')->paginate($this->perPage);
+        if ($this->filterStatus === 'perlu_diturunkan') {
+            return $query->orderByDesc('end_date')->latest('id')->paginate($this->perPage);
+        }
+
+        return $query->latest('updated_at')->latest('id')->paginate($this->perPage);
     }
 }

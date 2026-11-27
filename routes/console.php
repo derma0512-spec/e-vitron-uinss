@@ -40,12 +40,19 @@ Artisan::command('sipetron:prune-storage', function () {
     $prunedNotifications = 0;
     if (Schema::hasTable('notifications')) {
         $prunedNotifications = DB::table('notifications')
-            ->whereNotNull('read_at')
-            ->where('read_at', '<', now()->subDays(180))
+            ->where(function ($query): void {
+                $query->where(function ($readQuery): void {
+                    $readQuery->whereNotNull('read_at')
+                        ->where('read_at', '<', now()->subDays(180));
+                })->orWhere(function ($unreadQuery): void {
+                    $unreadQuery->whereNull('read_at')
+                        ->where('created_at', '<', now()->subDays(365));
+                });
+            })
             ->delete();
     }
 
-    $this->info("Pruned {$prunedSessions} expired sessions, {$prunedCache} expired cache entries, {$prunedLocks} expired cache locks, and {$prunedNotifications} old read notifications.");
-})->purpose('Bersihkan baris sesi, cache kedaluwarsa, dan notifikasi lama yang telah dibaca agar database tetap ringan dalam jangka panjang');
+    $this->info("Pruned {$prunedSessions} expired sessions, {$prunedCache} expired cache entries, {$prunedLocks} expired cache locks, and {$prunedNotifications} old notifications.");
+})->purpose('Bersihkan baris sesi, cache kedaluwarsa, dan notifikasi lama agar database tetap ringan dalam jangka panjang');
 
 Schedule::command('sipetron:prune-storage')->dailyAt('03:00');

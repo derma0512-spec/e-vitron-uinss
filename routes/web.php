@@ -56,7 +56,7 @@ Route::middleware(['auth', EnsureAdminRole::class, PreventBackHistory::class])->
     Route::delete('/notifications', [NotificationController::class, 'clearAll'])->name('admin.notifications.clearAll');
     Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('admin.notifications.markAllAsRead');
 
-    Route::post('/change-password', [AuthController::class, 'changePassword'])->name('admin.change-password');
+    Route::post('/change-password', [AuthController::class, 'changePassword'])->name('admin.change-password')->middleware('throttle:5,1');
     Route::get('/history-and-recap/print', [RecapPrintController::class, 'print'])->name('admin.history-and-recap.print');
     Route::get('/history-and-recap/export-pdf', [RecapPrintController::class, 'exportPdf'])->name('admin.history-and-recap.export-pdf')->middleware('throttle:20,1');
     Route::get('/submissions/{id}/print-pdf', [RecapPrintController::class, 'printSinglePdf'])->name('admin.submissions.print-pdf')->middleware('throttle:20,1');

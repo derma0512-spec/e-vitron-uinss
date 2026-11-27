@@ -7,7 +7,9 @@ use App\Filament\Widgets\UpcomingBroadcastsWidget;
 use App\Filament\Widgets\VideotronUsageChartWidget;
 use App\Models\Submission;
 use App\Models\Videotron;
+use App\Services\VideotronPlaybackService;
 use Filament\Pages\Dashboard as BaseDashboard;
+use Illuminate\Database\Eloquent\Builder;
 
 class Dashboard extends BaseDashboard
 {
@@ -48,15 +50,24 @@ class Dashboard extends BaseDashboard
     public function getViewData(): array
     {
         $now = now();
+        $playbackService = app(VideotronPlaybackService::class);
+        $today = $playbackService->todayDate();
 
         $stats = Submission::getDisplayStatusCounts();
 
         $deviceStats = Videotron::getOperationalStats();
 
+        $videotrons = Videotron::query()
+            ->withCount([
+                'submissions as active_broadcasts_count' => fn (Builder $query) => $playbackService->applyActiveBroadcastConstraints($query, $today),
+            ])
+            ->get();
+
         return [
             'stats' => $stats,
             'deviceStats' => $deviceStats,
-            'videotrons' => Videotron::all(),
+            'videotrons' => $videotrons,
+            'pendingTakedownCount' => $playbackService->countPendingTakedownSubmissions($today),
             'currentDate' => $now->locale('id')->translatedFormat('l, d F Y'),
             'currentTime' => $now->format('H:i:s').' WIB',
             'adminName' => auth()->user()?->name ?? 'Admin',

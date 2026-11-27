@@ -308,6 +308,11 @@
                     <form action="{{ route('login.post') }}" method="POST" class="space-y-3.5">
                         @csrf
 
+                        {{-- Honeypot field (anti bot) --}}
+                        <div class="hidden" aria-hidden="true">
+                            <input type="text" name="website" tabindex="-1" autocomplete="off">
+                        </div>
+
                         <!-- Field 1: Username -->
                         <div>
                             <label for="identifier" class="block text-xs font-bold text-[#0F3D2E] mb-1">

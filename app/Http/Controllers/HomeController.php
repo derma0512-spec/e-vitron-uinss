@@ -14,8 +14,16 @@ class HomeController extends Controller
      */
     public function index(): View|RedirectResponse
     {
-        if (Auth::user()?->role === 'admin') {
+        $user = Auth::user();
+        if ($user?->isActiveAdmin()) {
             return redirect('/admin');
+        }
+
+        if ($user?->isAdmin()) {
+            Auth::logout();
+
+            return redirect()->route('login')
+                ->with('error', 'Akun admin Anda sedang dinonaktifkan. Silakan hubungi Admin Utama (PUSTIKOM).');
         }
 
         $recentSubmissions = Submission::where('user_id', Auth::id())

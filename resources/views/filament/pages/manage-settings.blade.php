@@ -13,8 +13,8 @@
                 window.history.replaceState({}, '', url);
             }
          }"
-         @keydown.enter="if ($event.target.tagName !== 'TEXTAREA' && $event.target.tagName !== 'BUTTON') { $event.preventDefault(); document.getElementById('sipetron-save-btn')?.click(); }"
-         @keydown.ctrl.enter="$event.preventDefault(); document.getElementById('sipetron-save-btn')?.click();">
+         @keydown.enter="if (tab !== 'admins' && $event.target.tagName !== 'TEXTAREA' && $event.target.tagName !== 'BUTTON') { $event.preventDefault(); document.getElementById('sipetron-save-btn')?.click(); }"
+         @keydown.ctrl.enter="if (tab !== 'admins') { $event.preventDefault(); document.getElementById('sipetron-save-btn')?.click(); }">
 
         {{-- Navigation Tabs --}}
         <div class="sipetron-settings-nav" role="tablist">
@@ -34,6 +34,12 @@
                 <svg class="sipetron-settings-tab-icon" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" /></svg>
                 <span>Kontak & Helpdesk</span>
             </button>
+            @if($this->canManageAdmins())
+                <button type="button" role="tab" :aria-selected="tab === 'admins'" @click="switchTab('admins')" :class="tab === 'admins' ? 'is-active bg-[#0F3D2E] text-white border-[#0F3D2E] shadow-sm font-bold' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'" class="sipetron-settings-tab-btn">
+                    <svg class="sipetron-settings-tab-icon" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" /></svg>
+                    <span>Tim Admin</span>
+                </button>
+            @endif
         </div>
 
         <form wire:submit.prevent="save" id="sipetron-settings-form" novalidate>
@@ -181,38 +187,65 @@
                                 </span>
                                 <span>Ketentuan Jadwal Pengajuan & Durasi Tayang</span>
                             </span>
-
-                            {{-- Toggle Batas Hari Tayang di Header Subgroup --}}
-                            <div class="sipetron-subgroup-action">
-                                <span class="sipetron-toggle-state-badge" :class="$wire.limit_display_days_enabled ? 'sipetron-toggle-state-active' : 'sipetron-toggle-state-inactive'" x-text="$wire.limit_display_days_enabled ? 'Batas Hari Aktif' : 'Bebas / Tanpa Batas'"></span>
-                                <label class="sipetron-switch-toggle" title="Aktifkan/nonaktifkan batas durasi hari tayang">
-                                    <input type="checkbox" wire:model="limit_display_days_enabled">
-                                    <span class="sipetron-switch-slider"></span>
-                                </label>
-                            </div>
                         </div>
 
                         <div class="sipetron-form-grid sipetron-form-grid-2">
                             {{-- Kolom 1: Minimal Hari Sebelum Tayang --}}
                             <div class="sipetron-form-group">
-                                <label class="sipetron-form-label">Minimal Hari Sebelum Tayang (H-X) <span class="sipetron-required-star" style="color: #EF4444; font-weight: 700;">*</span></label>
-                                <div class="sipetron-input-addon-wrap">
-                                    <input type="number" min="0" max="30" wire:model.defer="min_days_before" class="sipetron-form-input">
-                                    <span class="sipetron-input-addon">Hari</span>
+                                <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.375rem; min-height: 26px;">
+                                    <label class="sipetron-form-label" style="margin-bottom: 0;">
+                                        Minimal Hari Sebelum Tayang
+                                        <span class="sipetron-required-star" style="color: #EF4444; font-weight: 700;" x-show="$wire.min_days_before_enabled">*</span>
+                                    </label>
+                                    <div class="sipetron-subgroup-action" style="gap: 0.5rem; flex-shrink: 0;">
+                                        <span class="sipetron-toggle-state-badge" :class="$wire.min_days_before_enabled ? 'sipetron-toggle-state-active' : 'sipetron-toggle-state-inactive'" x-text="$wire.min_days_before_enabled ? 'Wajib H-X' : 'Bisa Hari-H'"></span>
+                                        <label class="sipetron-switch-toggle" title="Aktifkan/nonaktifkan batas minimal hari sebelum tayang (nonaktif = bisa diajukan Hari-H)">
+                                            <input type="checkbox" wire:model="min_days_before_enabled">
+                                            <span class="sipetron-switch-slider"></span>
+                                        </label>
+                                    </div>
                                 </div>
-                                <span class="sipetron-form-hint">Nilai 3 = pemohon wajib mengajukan minimal H-3 sebelum tanggal tayang.</span>
-                                @error('min_days_before') <span class="sipetron-form-error">{{ $message }}</span> @enderror
+
+                                {{-- Jika Batas H-X Aktif --}}
+                                <div x-show="$wire.min_days_before_enabled">
+                                    <div class="sipetron-input-addon-wrap">
+                                        <input type="number" min="1" max="30" wire:model.defer="min_days_before" class="sipetron-form-input">
+                                        <span class="sipetron-input-addon">Hari</span>
+                                    </div>
+                                    <span class="sipetron-form-hint">Nilai 3 = pemohon wajib mengajukan minimal H-3 sebelum tanggal tayang.</span>
+                                    @error('min_days_before') <span class="sipetron-form-error">{{ $message }}</span> @enderror
+                                </div>
+
+                                {{-- Jika Fleksibel / Bisa Hari-H --}}
+                                <div x-show="!$wire.min_days_before_enabled" x-cloak>
+                                    <div class="sipetron-unlimited-pill">
+                                        <svg class="sipetron-subgroup-badge-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                        </svg>
+                                        <span>Bisa Diajukan Hari-H (Mulai Hari Ini)</span>
+                                    </div>
+                                    <span class="sipetron-form-hint">Pemohon dapat memilih tanggal mulai tayang mulai hari ini tanpa batas minimal H-X.</span>
+                                </div>
                             </div>
 
                             {{-- Kolom 2: Maksimal Hari Penayangan --}}
                             <div class="sipetron-form-group">
-                                <label class="sipetron-form-label">
-                                    Maksimal Durasi Penayangan
-                                    <span class="sipetron-required-star" style="color: #EF4444; font-weight: 700;" x-show="$wire.limit_display_days_enabled">*</span>
-                                </label>
+                                <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.375rem; min-height: 26px;">
+                                    <label class="sipetron-form-label" style="margin-bottom: 0;">
+                                        Maksimal Durasi Penayangan
+                                        <span class="sipetron-required-star" style="color: #EF4444; font-weight: 700;" x-show="$wire.limit_display_days_enabled">*</span>
+                                    </label>
+                                    <div class="sipetron-subgroup-action" style="gap: 0.5rem; flex-shrink: 0;">
+                                        <span class="sipetron-toggle-state-badge" :class="$wire.limit_display_days_enabled ? 'sipetron-toggle-state-active' : 'sipetron-toggle-state-inactive'" x-text="$wire.limit_display_days_enabled ? 'Batas Aktif' : 'Tanpa Batas'"></span>
+                                        <label class="sipetron-switch-toggle" title="Aktifkan/nonaktifkan batas durasi hari tayang">
+                                            <input type="checkbox" wire:model="limit_display_days_enabled">
+                                            <span class="sipetron-switch-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
 
                                 {{-- Jika Batas Aktif --}}
-                                <div x-show="$wire.limit_display_days_enabled">
+                                <div x-show="$wire.limit_display_days_enabled" x-cloak>
                                     <div class="sipetron-input-addon-wrap">
                                         <input type="number" min="1" max="365" wire:model.defer="max_display_days" class="sipetron-form-input">
                                         <span class="sipetron-input-addon">Hari</span>
@@ -400,5 +433,10 @@
             @include('filament.pages.partials.manage-settings.tabs-service-and-helpdesk')
 
         </form>
+
+        {{-- Tab 5: Tim Admin (Khusus Super Admin, di luar form pengaturan utama agar modal terpisah rapi) --}}
+        @if($this->canManageAdmins())
+            @include('filament.pages.partials.manage-settings.tab-admins')
+        @endif
     </div>
 </x-filament-panels::page>

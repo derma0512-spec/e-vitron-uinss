@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -52,10 +53,13 @@ class AppServiceProvider extends ServiceProvider
         Notifications::alignment(Alignment::Right);
         Notifications::verticalAlignment(VerticalAlignment::Start);
 
-        RateLimiter::for('login', function (Request $request) {
-            $identifier = (string) $request->input('identifier');
+        RateLimiter::for('login', function (Request $request): array {
+            $identifier = Str::lower(trim((string) $request->input('identifier')));
 
-            return Limit::perMinute(5)->by($identifier ? $identifier.'|'.$request->ip() : $request->ip());
+            return [
+                Limit::perMinute(5)->by($identifier !== '' ? $identifier.'|'.$request->ip() : $request->ip()),
+                Limit::perMinute(60)->by('ip|'.$request->ip()),
+            ];
         });
 
         Mail::extend('brevo', function (array $config = []): BrevoApiTransport {

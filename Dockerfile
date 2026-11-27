@@ -35,11 +35,13 @@ RUN a2dismod -f mpm_event mpm_worker || true \
     && sed -ri -e 's!/var/www/!/var/www/html/public!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf \
     && sed -ri -e 's!AllowOverride None!AllowOverride All!g' /etc/apache2/apache2.conf \
     && echo "ServerName localhost" > /etc/apache2/conf-available/servername.conf \
-    && a2enconf servername \
+    && printf "ServerTokens Prod\nServerSignature Off\n" > /etc/apache2/conf-available/security-hardening.conf \
+    && a2enconf servername security-hardening \
     && apache2ctl -t
 
 # PHP runtime and OPcache tuning
 RUN { \
+        echo 'expose_php=Off'; \
         echo 'memory_limit=256M'; \
         echo 'upload_max_filesize=20M'; \
         echo 'post_max_size=25M'; \

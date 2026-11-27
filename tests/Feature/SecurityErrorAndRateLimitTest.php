@@ -9,6 +9,7 @@ use App\Models\Videotron;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -250,12 +251,25 @@ class SecurityErrorAndRateLimitTest extends TestCase
         $loginResponse->assertHeader('X-Frame-Options', 'SAMEORIGIN');
         $loginResponse->assertHeader('X-Content-Type-Options', 'nosniff');
         $loginResponse->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+        $loginResponse->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+        $loginResponse->assertHeaderMissing('Strict-Transport-Security');
+        $loginResponse->assertHeaderMissing('X-Powered-By');
+        $loginCsp = (string) $loginResponse->headers->get('Content-Security-Policy');
+        $this->assertStringContainsString("frame-ancestors 'self'", $loginCsp);
+        $this->assertStringContainsString("object-src 'none'", $loginCsp);
+        $this->assertStringContainsString("base-uri 'self'", $loginCsp);
+        $this->assertStringContainsString("form-action 'self'", $loginCsp);
+
+        $httpsLoginResponse = $this->get('https://localhost/login');
+        $httpsLoginResponse->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 
         $applicant = User::factory()->create(['role' => 'mahasiswa']);
         $portalResponse = $this->actingAs($applicant)->get(route('pengajuan.index'));
         $portalResponse->assertHeader('X-Frame-Options', 'SAMEORIGIN');
         $portalResponse->assertHeader('X-Content-Type-Options', 'nosniff');
         $portalResponse->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+        $portalResponse->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+        $this->assertStringContainsString("object-src 'none'", (string) $portalResponse->headers->get('Content-Security-Policy'));
     }
 
     public function test_owasp_a07_admin_account_with_numeric_identifier_cannot_be_overwritten_via_sso_login(): void
@@ -520,6 +534,16 @@ class SecurityErrorAndRateLimitTest extends TestCase
                 'created_at' => now()->subDays(210),
                 'updated_at' => now()->subDays(210),
             ],
+            [
+                'id' => '00000000-0000-0000-0000-000000000004',
+                'type' => 'App\\Notifications\\SubmissionStatusNotification',
+                'notifiable_type' => User::class,
+                'notifiable_id' => $user->id,
+                'data' => json_encode(['event' => 'revisi', 'title' => 'Sangat Lama Belum Dibaca (>1 Tahun)']),
+                'read_at' => null,
+                'created_at' => now()->subDays(400),
+                'updated_at' => now()->subDays(400),
+            ],
         ]);
 
         $this->artisan('sipetron:prune-storage')->assertExitCode(0);
@@ -527,6 +551,7 @@ class SecurityErrorAndRateLimitTest extends TestCase
         $this->assertDatabaseMissing('notifications', ['id' => '00000000-0000-0000-0000-000000000001']);
         $this->assertDatabaseHas('notifications', ['id' => '00000000-0000-0000-0000-000000000002']);
         $this->assertDatabaseHas('notifications', ['id' => '00000000-0000-0000-0000-000000000003']);
+        $this->assertDatabaseMissing('notifications', ['id' => '00000000-0000-0000-0000-000000000004']);
     }
 
     public function test_smtp_timeout_is_bounded_and_heavy_endpoints_enforce_rate_limits(): void
@@ -558,6 +583,7 @@ class SecurityErrorAndRateLimitTest extends TestCase
         $pdfResponse = $this->actingAs($user)->get(route('pengajuan.print', $submission->ticket_code));
         $pdfResponse->assertOk();
         $pdfResponse->assertHeader('X-RateLimit-Limit', '20');
+        $pdfResponse->assertHeaderMissing('Content-Security-Policy');
     }
 
     public function test_portal_toast_renderer_escapes_html_before_dom_insertion(): void
@@ -589,5 +615,218 @@ class SecurityErrorAndRateLimitTest extends TestCase
         } finally {
             $this->app['env'] = $originalEnvironment;
         }
+    }
+
+    public function test_login_rate_limiter_blocks_password_spraying_across_different_usernames_from_same_ip(): void
+    {
+        for ($i = 1; $i <= 60; $i++) {
+            $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.77'])
+                ->post('/login', [
+                    'identifier' => "spray{$i}@target.ac.id",
+                    'password' => 'CommonPass123',
+                ])
+                ->assertSessionHas('error');
+        }
+
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.77'])
+            ->post('/login', [
+                'identifier' => 'spray61@target.ac.id',
+                'password' => 'CommonPass123',
+            ])
+            ->assertStatus(429);
+    }
+
+    public function test_login_honeypot_blocks_bot_submission_even_with_valid_credentials(): void
+    {
+        $admin = User::factory()->create([
+            'email' => 'bot.target@uinssc.ac.id',
+            'role' => 'admin',
+            'password' => bcrypt('StrongPass123!'),
+        ]);
+
+        $response = $this->post('/login', [
+            'identifier' => $admin->email,
+            'password' => 'StrongPass123!',
+            'website' => 'https://spam-bot.example',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('error', 'Username atau password salah.');
+        $this->assertGuest();
+    }
+
+    public function test_trusted_proxies_ignores_spoofed_forwarded_ip_from_untrusted_remote_client(): void
+    {
+        $this->assertSame('127.0.0.1,::1', config('trustedproxy.proxies'));
+
+        // Klien eksternal mencoba memutar header X-Forwarded-For palsu pada setiap percobaan login
+        for ($i = 1; $i <= 5; $i++) {
+            $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.45'])
+                ->withHeaders(['X-Forwarded-For' => "10.0.0.{$i}"])
+                ->post('/login', [
+                    'identifier' => 'spoof.target@uinssc.ac.id',
+                    'password' => 'WrongPassword'.$i,
+                ])
+                ->assertSessionHas('error');
+        }
+
+        // Percobaan ke-6 tetap terkena HTTP 429 karena X-Forwarded-For palsu diabaikan
+        $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.45'])
+            ->withHeaders(['X-Forwarded-For' => '10.0.0.99'])
+            ->post('/login', [
+                'identifier' => 'spoof.target@uinssc.ac.id',
+                'password' => 'WrongPassword6',
+            ])
+            ->assertStatus(429);
+    }
+
+    public function test_admin_change_password_enforces_min_length_invalidates_other_sessions_and_throttles(): void
+    {
+        $admin = User::factory()->create([
+            'email' => 'admin.security@uinssc.ac.id',
+            'role' => 'admin',
+            'password' => bcrypt('OldPassword123'),
+            'remember_token' => 'old_remember_token_123456',
+        ]);
+
+        // 1. Password kurang dari 8 karakter wajib ditolak 422
+        $this->actingAs($admin)
+            ->postJson(route('admin.change-password'), [
+                'current_password' => 'OldPassword123',
+                'new_password' => 'short77',
+                'new_password_confirmation' => 'short77',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['new_password']);
+
+        // 2. Ubah password valid merotasi remember_token dan menghapus sesi perangkat lain
+        config(['session.driver' => 'database']);
+        DB::table('sessions')->insert([
+            'id' => 'other_device_session_id',
+            'user_id' => $admin->id,
+            'ip_address' => '198.51.100.12',
+            'user_agent' => 'OtherDevice/1.0',
+            'payload' => 'dGVzdA==',
+            'last_activity' => now()->getTimestamp(),
+        ]);
+
+        $this->actingAs($admin)
+            ->postJson(route('admin.change-password'), [
+                'current_password' => 'OldPassword123',
+                'new_password' => 'NewSecurePass123',
+                'new_password_confirmation' => 'NewSecurePass123',
+            ])
+            ->assertOk()
+            ->assertJson(['success' => true]);
+
+        $admin->refresh();
+        $this->assertTrue(Hash::check('NewSecurePass123', $admin->password));
+        $this->assertNotSame('old_remember_token_123456', $admin->remember_token);
+        $this->assertDatabaseMissing('sessions', ['id' => 'other_device_session_id']);
+
+        // 3. Total 5 percobaan per menit diperbolehkan, percobaan ke-6 diblokir HTTP 429
+        for ($i = 0; $i < 3; $i++) {
+            $this->actingAs($admin)
+                ->postJson(route('admin.change-password'), [
+                    'current_password' => 'WrongCurrentPass',
+                    'new_password' => 'AnotherPass123',
+                    'new_password_confirmation' => 'AnotherPass123',
+                ])
+                ->assertStatus(422);
+        }
+
+        $this->actingAs($admin)
+            ->postJson(route('admin.change-password'), [
+                'current_password' => 'WrongCurrentPass',
+                'new_password' => 'AnotherPass123',
+                'new_password_confirmation' => 'AnotherPass123',
+            ])
+            ->assertStatus(429);
+    }
+
+    public function test_registration_enforces_minimum_8_character_password(): void
+    {
+        $response = $this->post(route('register.post'), [
+            'name' => 'Pemohon Password Pendek',
+            'role_type' => 'mitra',
+            'unit_or_prodi' => 'PT Mitra Kampus',
+            'email' => 'shortpass@mitra.co.id',
+            'phone' => '081234567890',
+            'password' => 'abc123',
+            'password_confirmation' => 'abc123',
+        ]);
+
+        $response->assertSessionHasErrors(['password']);
+        $this->assertDatabaseMissing('users', ['email' => 'shortpass@mitra.co.id']);
+    }
+
+    public function test_deactivated_admin_visiting_home_is_logged_out_and_redirected_to_login(): void
+    {
+        $inactiveAdmin = User::factory()->create([
+            'role' => 'admin',
+            'account_status' => 'inactive',
+        ]);
+
+        $response = $this->actingAs($inactiveAdmin)->get(route('home'));
+
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHas('error');
+        $this->assertGuest();
+    }
+
+    public function test_recap_print_view_displays_truncation_notice_when_archive_exceeds_export_limit(): void
+    {
+        $view = $this->view('admin.recap-print', [
+            'submissions' => collect(),
+            'totalArchived' => 500,
+            'totalCompleted' => 420,
+            'totalRejected' => 50,
+            'totalCanceled' => 30,
+            'filterStatus' => null,
+            'isTruncated' => true,
+            'totalMatched' => 1250,
+            'maxExportRows' => 500,
+        ]);
+
+        $view->assertSee('Catatan Batas Cetak');
+        $view->assertSee('1250');
+        $view->assertSee('500');
+    }
+
+    public function test_setting_and_videotron_seeders_preserve_admin_customizations_on_redeploy(): void
+    {
+        $this->artisan('db:seed', ['--class' => 'Database\\Seeders\\SettingSeeder', '--force' => true])
+            ->assertExitCode(0);
+        $this->artisan('db:seed', ['--class' => 'Database\\Seeders\\VideotronSeeder', '--force' => true])
+            ->assertExitCode(0);
+
+        $this->assertTrue((bool) Setting::get('min_days_before_enabled'));
+        $this->assertSame(6, Videotron::count());
+
+        // Simulasi Admin PUSTIKOM mengubah pengaturan dan kondisi perangkat videotron
+        Setting::set('helpdesk_whatsapp', '089911223344', 'string', 'helpdesk');
+        Setting::set('min_days_before_enabled', false, 'boolean', 'policy');
+
+        $masjid = Videotron::where('name', 'Videotron Masjid')->firstOrFail();
+        $masjid->update([
+            'condition' => 'gangguan',
+            'is_active' => false,
+            'resolution' => '2560x1440',
+        ]);
+
+        // Simulasi redeploy yang menjalankan ulang seeder master
+        $this->artisan('db:seed', ['--class' => 'Database\\Seeders\\SettingSeeder', '--force' => true])
+            ->assertExitCode(0);
+        $this->artisan('db:seed', ['--class' => 'Database\\Seeders\\VideotronSeeder', '--force' => true])
+            ->assertExitCode(0);
+
+        Setting::clearCache();
+        $this->assertSame('089911223344', Setting::get('helpdesk_whatsapp'));
+        $this->assertFalse((bool) Setting::get('min_days_before_enabled'));
+
+        $masjid->refresh();
+        $this->assertSame('gangguan', $masjid->condition);
+        $this->assertFalse($masjid->is_active);
+        $this->assertSame('2560x1440', $masjid->resolution);
     }
 }

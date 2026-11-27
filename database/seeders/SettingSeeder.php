@@ -26,6 +26,7 @@ class SettingSeeder extends Seeder
             'institution_email' => ['value' => 'info@uinssc.ac.id', 'type' => 'string', 'group' => 'signatory'],
 
             // Tab 2: Kebijakan & Aturan Pengajuan
+            'min_days_before_enabled' => ['value' => true, 'type' => 'boolean', 'group' => 'policy'],
             'min_days_before' => ['value' => 3, 'type' => 'integer', 'group' => 'policy'],
             'limit_display_days_enabled' => ['value' => false, 'type' => 'boolean', 'group' => 'policy'],
             'max_display_days' => ['value' => 0, 'type' => 'integer', 'group' => 'policy'],
@@ -51,6 +52,10 @@ class SettingSeeder extends Seeder
         ];
 
         foreach ($defaults as $key => $item) {
+            if (Setting::where('key', $key)->exists()) {
+                continue;
+            }
+
             Setting::set($key, $item['value'], $item['type'], $item['group']);
         }
     }

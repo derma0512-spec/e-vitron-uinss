@@ -175,6 +175,11 @@
           drawer.classList.remove('translate-x-full');
           drawer.classList.add('translate-x-0');
           if (notifBtn) notifBtn.setAttribute('aria-expanded', 'true');
+
+          // Segarkan isi daftar notifikasi terbaru segera saat laci dibuka
+          if (typeof window.pollPortalNotifications === 'function') {
+            window.pollPortalNotifications(true);
+          }
         };
 
         window.closeNotifDrawer = function () {

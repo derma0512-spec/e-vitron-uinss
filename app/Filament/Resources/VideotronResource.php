@@ -2,8 +2,10 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Pages\HistoryAndRecap;
 use App\Filament\Resources\VideotronResource\Pages;
 use App\Models\Videotron;
+use App\Services\VideotronPlaybackService;
 use Filament\Actions\StaticAction;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -12,6 +14,7 @@ use Filament\Resources\Resource;
 use Filament\Support\Enums\Alignment;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 
@@ -132,6 +135,14 @@ class VideotronResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(function (Builder $query): Builder {
+                $playbackService = app(VideotronPlaybackService::class);
+                $today = $playbackService->todayDate();
+
+                return $query->withCount([
+                    'submissions as active_broadcasts_count' => fn (Builder $subQuery) => $playbackService->applyActiveBroadcastConstraints($subQuery, $today),
+                ]);
+            })
             ->searchPlaceholder('Cari videotron atau lokasi...')
             ->searchDebounce('300ms')
             ->hiddenFilterIndicators()
@@ -156,17 +167,27 @@ class VideotronResource extends Resource
                 Tables\Columns\TextColumn::make('name')
                     ->label('Videotron & Lokasi')
                     ->weight('bold')
+                    ->formatStateUsing(function (string $state, Videotron $record): HtmlString {
+                        $activeCount = (int) ($record->active_broadcasts_count ?? 0);
+                        $badge = $activeCount > 0
+                            ? '<span style="display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.6875rem; font-weight: 700; color: #047857; background: #ECFDF5; border: 1px solid #A7F3D0; padding: 0.08rem 0.45rem; border-radius: 9999px; line-height: 1.3; white-space: nowrap;"><span style="width: 5px; height: 5px; border-radius: 9999px; background: #10B981; display: inline-block;"></span>'.$activeCount.' tayang</span>'
+                            : '<span style="display: inline-flex; align-items: center; font-size: 0.6875rem; font-weight: 600; color: #64748B; background: #F8FAFC; border: 1px solid #E2E8F0; padding: 0.08rem 0.45rem; border-radius: 9999px; line-height: 1.3; white-space: nowrap;">Kosong</span>';
+
+                        return new HtmlString(
+                            '<span style="display: inline-flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">'
+                            .'<span>'.e($state).'</span>'
+                            .$badge
+                            .'</span>'
+                        );
+                    })
                     ->description(fn (Videotron $record): string => $record->location)
+                    ->action(self::makeInspectBroadcastsAction())
                     ->searchable(['name', 'location'])
                     ->wrap(),
                 Tables\Columns\TextColumn::make('resolution')
                     ->label('Resolusi & Rasio')
-                    ->formatStateUsing(fn ($state, Videotron $record): string => str_replace('x', ' × ', (string) $record->resolution))
-                    ->description(fn (Videotron $record): string => match ($record->orientation) {
-                        'landscape' => 'Landscape (16:9)',
-                        'portrait' => 'Portrait (9:16)',
-                        default => ucfirst($record->orientation),
-                    })
+                    ->formatStateUsing(fn ($state, Videotron $record): string => $record->formattedResolution())
+                    ->description(fn (Videotron $record): string => $record->orientationWithRatioLabel())
                     ->alignCenter(),
                 Tables\Columns\TextColumn::make('condition')
                     ->label('Kondisi')
@@ -233,7 +254,7 @@ class VideotronResource extends Resource
                     }),
             ])
             ->filters([])
-            ->recordAction('edit')
+            ->recordAction('inspect_broadcasts')
             ->actionsColumnLabel('Aksi')
             ->actionsAlignment(Alignment::Center->value)
             ->actions([
@@ -498,6 +519,57 @@ class VideotronResource extends Resource
             ->bulkActions([])
             ->defaultPaginationPageOption(10)
             ->paginationPageOptions([5, 10, 25, 50]);
+    }
+
+    private static function makeInspectBroadcastsAction(): Tables\Actions\Action
+    {
+        return Tables\Actions\Action::make('inspect_broadcasts')
+            ->slideOver()
+            ->modalWidth('xl')
+            ->modalIcon('heroicon-o-tv')
+            ->modalIconColor('primary')
+            ->modalAlignment(Alignment::Left)
+            ->modalHeading(fn (Videotron $record): string => 'Tayang Hari Ini — '.$record->name)
+            ->modalDescription(function (Videotron $record): HtmlString {
+                $todayLabel = now()->timezone('Asia/Jakarta')->locale('id')->translatedFormat('l, d M Y');
+
+                return new HtmlString(
+                    '<div class="videotron-modal-desc-row">'
+                    .'<span class="videotron-modal-desc-name">'.e($todayLabel).'</span>'
+                    .'<span class="videotron-modal-desc-badge">'
+                    .'<svg class="videotron-modal-desc-icon" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" /></svg>'
+                    .e($record->location)
+                    .'</span>'
+                    .'</div>'
+                );
+            })
+            ->modalContent(function (Videotron $record) {
+                $service = app(VideotronPlaybackService::class);
+                $today = $service->todayDate();
+                $activeBroadcasts = $service->getActiveBroadcastsForVideotron($record, $today);
+                $pendingTakedowns = $service->getPendingTakedownsForVideotron($record, $today);
+
+                return view('filament.resources.videotron-resource.modals.broadcast-audit', [
+                    'videotron' => $record,
+                    'today' => $today,
+                    'activeBroadcasts' => $activeBroadcasts,
+                    'pendingTakedowns' => $pendingTakedowns,
+                    'historyPendingUrl' => HistoryAndRecap::getUrl(['filterStatus' => 'perlu_diturunkan']),
+                ]);
+            })
+            ->modalSubmitAction(false)
+            ->modalCancelAction(fn (StaticAction $action) => $action
+                ->label('Tutup')
+                ->color('gray')
+            )
+            ->modalAutofocus(false)
+            ->stickyModalHeader()
+            ->stickyModalFooter()
+            ->modalFooterActionsAlignment(Alignment::End)
+            ->extraModalWindowAttributes([
+                'class' => 'modal-ubah-data-videotron modal-audit-tayang-videotron',
+                'tabindex' => '-1',
+            ]);
     }
 
     public static function getRelations(): array

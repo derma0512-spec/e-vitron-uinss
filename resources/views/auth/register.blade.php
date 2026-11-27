@@ -390,7 +390,7 @@
                                         id="password" 
                                         name="password" 
                                         required
-                                        placeholder="Min. 6 karakter"
+                                        placeholder="Min. 8 karakter"
                                         class="w-full h-[40px] pl-3 pr-8 bg-[#FBFDFB] hover:bg-white focus:bg-white border @error('password') border-rose-300 ring-2 ring-rose-100 @else border-[#DCE7DF] @enderror rounded-[11px] text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0F3D2E] focus:ring-2 focus:ring-[#0F3D2E]/10 transition-all text-xs font-medium">
                                     <button 
                                         type="button" 

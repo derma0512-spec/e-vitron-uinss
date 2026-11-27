@@ -390,7 +390,16 @@
             <h1 class="report-title">LAPORAN REKAPITULASI PENAYANGAN INFORMASI VIDEOTRON</h1>
             <p class="report-subtitle">
                 @if($filterStatus)
-                    Kategori Status: <strong>{{ ucfirst($filterStatus) }}</strong> &bull;
+                    @php
+                        $printStatusLabel = match ($filterStatus) {
+                            'perlu_diturunkan' => 'Perlu Diturunkan',
+                            'selesai' => 'Selesai Tayang',
+                            'ditolak' => 'Ditolak Admin',
+                            'dibatalkan' => 'Dibatalkan Pengaju',
+                            default => ucfirst((string) $filterStatus),
+                        };
+                    @endphp
+                    Kategori Status: <strong>{{ $printStatusLabel }}</strong> &bull;
                 @else
                     Kategori: <strong>Seluruh Arsip Riwayat</strong> &bull;
                 @endif
@@ -399,6 +408,11 @@
         </div>
 
         {{-- Ringkasan Rekap (Summary Strip) --}}
+        @if(!empty($isTruncated))
+            <div style="margin-bottom: 12px; padding: 9px 14px; background-color: #FFFBEB; border: 1px solid #F59E0B; border-radius: 6px; color: #92400E; font-family: system-ui, -apple-system, sans-serif; font-size: 9.5pt;">
+                <strong>Catatan Batas Cetak:</strong> Ditemukan <strong>{{ $totalMatched }}</strong> arsip pada filter ini. Demi menjaga kecepatan cetak, pratinjau menampilkan <strong>{{ $maxExportRows ?? 500 }}</strong> data terbaru. Gunakan filter rentang tanggal agar seluruh data tercetak lengkap.
+            </div>
+        @endif
         <div class="summary-box">
             <div class="summary-item">
                 <span class="summary-label">Total Arsip Pengajuan:</span>

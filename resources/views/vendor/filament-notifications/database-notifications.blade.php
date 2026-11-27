@@ -22,6 +22,39 @@
         lastUnreadId: null,
         lastUnreadCount: @js($unreadNotificationsCount),
         isReady: false,
+        lastFocusRefreshAt: 0,
+        visibilityHandler: null,
+        focusHandler: null,
+        init() {
+            this.visibilityHandler = () => {
+                if (document.visibilityState === 'visible') {
+                    this.refreshNow();
+                }
+            };
+            this.focusHandler = () => {
+                this.refreshNow();
+            };
+            document.addEventListener('visibilitychange', this.visibilityHandler);
+            window.addEventListener('focus', this.focusHandler);
+        },
+        destroy() {
+            if (this.visibilityHandler) {
+                document.removeEventListener('visibilitychange', this.visibilityHandler);
+            }
+            if (this.focusHandler) {
+                window.removeEventListener('focus', this.focusHandler);
+            }
+        },
+        refreshNow() {
+            const now = Date.now();
+            if (now - this.lastFocusRefreshAt < 1500) {
+                return;
+            }
+            this.lastFocusRefreshAt = now;
+            if (this.$wire && typeof this.$wire.$refresh === 'function') {
+                this.$wire.$refresh();
+            }
+        },
         playChime() {
             try {
                 const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -126,9 +159,15 @@
             window.dispatchEvent(new CustomEvent('sipetron:new-notification-arrived', { detail: latest }));
         }
     }"
-    x-init="checkIncoming(@js($latestData), {{ (int) $unreadNotificationsCount }})"
-    x-effect="checkIncoming(@js($latestData), {{ (int) $unreadNotificationsCount }})"
 >
+    {{-- Sentinel ber-wire:key agar Alpine selalu menerima payload terbaru saat polling/refresh mengembalikan notifikasi baru --}}
+    <span
+        class="hidden"
+        aria-hidden="true"
+        wire:key="notif-poll-signal-{{ $latestData['id'] ?? 'none' }}-{{ (int) $unreadNotificationsCount }}"
+        x-init="checkIncoming(@js($latestData), {{ (int) $unreadNotificationsCount }})"
+    ></span>
+
     @if ($trigger = $this->getTrigger())
         <x-filament-notifications::database.trigger>
             {{ $trigger->with(['unreadNotificationsCount' => $unreadNotificationsCount]) }}

@@ -736,9 +736,13 @@
         transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
     }
 
-    /* Hilangkan tombol reveal bawaan Microsoft Edge / Windows */
+    /* Hilangkan tombol reveal bawaan Microsoft Edge / Windows agar tidak dobel dengan ikon mata kustom */
     .sipetron-cp-input::-ms-reveal,
-    .sipetron-cp-input::-ms-clear {
+    .sipetron-cp-input::-ms-clear,
+    .sipetron-form-input::-ms-reveal,
+    .sipetron-form-input::-ms-clear,
+    .fi-manage-settings-page input[type="password"]::-ms-reveal,
+    .fi-manage-settings-page input[type="password"]::-ms-clear {
         display: none !important;
     }
 
@@ -2659,14 +2663,15 @@
         font-size: 0.825rem !important;
         font-weight: 600 !important;
         color: #1E293B !important;
-        line-height: 1.2 !important;
+        line-height: 1.3 !important;
     }
     .videotron-condition-radio-grid label p,
     :is(.modal-ubah-status-videotron, .fi-modal-window:has(.videotron-condition-radio-grid)) .fi-fo-radio label p {
         font-size: 0.7rem !important;
         color: #64748B !important;
-        line-height: 1.2 !important;
+        line-height: 1.45 !important;
         margin-top: 1px !important;
+        padding-bottom: 1px !important;
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
@@ -4397,6 +4402,110 @@
     .modal-ubah-data-videotron .fi-modal-footer-actions button[type="submit"]:hover {
         background-color: #0B2B20 !important;
         border-color: #0B2B20 !important;
+    }
+
+    /* ==========================================================================
+       SLIDE-OVER: TAYANG HARI INI VIDEOTRON (.modal-audit-tayang-videotron)
+       Mengikuti komponen baku laci Pengajuan & Riwayat & Rekap
+       ========================================================================== */
+    .modal-audit-tayang-videotron .sipetron-info-card {
+        background: #F8FAF9;
+        border: 1px solid #E2E8F0;
+        border-radius: 0.75rem;
+        padding: 0.875rem 1rem;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .modal-audit-tayang-videotron .sipetron-info-card:hover {
+        border-color: #CBD5E1;
+        box-shadow: 0 2px 8px -1px rgba(0, 0, 0, 0.04);
+    }
+    .modal-audit-tayang-videotron .sipetron-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #E2E8F0;
+    }
+    .modal-audit-tayang-videotron .sipetron-card-title {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        font-size: 0.8125rem;
+        font-weight: 700;
+        color: #0F3D2E;
+        letter-spacing: 0.01em;
+    }
+    .modal-audit-tayang-videotron .sipetron-doc-item {
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 0.625rem;
+        padding: 0.75rem 0.85rem;
+        transition: border-color 150ms ease, box-shadow 150ms ease;
+    }
+    .modal-audit-tayang-videotron .sipetron-doc-item:hover {
+        border-color: #CBD5E1;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    }
+    .modal-audit-tayang-videotron .sipetron-chip-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 9px;
+        border-radius: 7px;
+        border: 1px solid #E2E8F0;
+        background: #F8FAF9;
+        color: #334155;
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1.2;
+        cursor: pointer;
+        transition: all 150ms ease;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+    .modal-audit-tayang-videotron .sipetron-chip-btn:hover {
+        border-color: #CBD5E1;
+        background: #E8F3EC;
+        color: #0F3D2E;
+    }
+    .modal-audit-tayang-videotron .fi-modal-content {
+        min-height: 0 !important;
+        padding: 20px 24px !important;
+    }
+    .modal-audit-tayang-videotron .sipetron-audit-chevron {
+        width: 14px !important;
+        height: 14px !important;
+        min-width: 14px !important;
+        min-height: 14px !important;
+        color: #B45309 !important;
+        flex-shrink: 0 !important;
+        display: block !important;
+        transition: transform 160ms ease;
+    }
+    .modal-audit-tayang-videotron .sipetron-audit-chevron.is-open {
+        transform: rotate(180deg);
+    }
+    .modal-audit-tayang-videotron .sipetron-audit-accordion-trigger {
+        transition: background-color 140ms ease;
+    }
+    .modal-audit-tayang-videotron .sipetron-audit-accordion-trigger:hover {
+        background-color: rgba(217, 119, 6, 0.06) !important;
+    }
+    .modal-audit-tayang-videotron .sipetron-audit-footer-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 0.71875rem;
+        font-weight: 700;
+        color: #B45309;
+        text-decoration: none;
+        transition: color 140ms ease;
+    }
+    .modal-audit-tayang-videotron .sipetron-audit-footer-link:hover {
+        color: #92400E;
+        text-decoration: underline;
     }
     /* ========================================================
        GLOBAL: HAPUS SEMUA EFEK MEMUDAR (FADE) & DELAY DI SEMUA HALAMAN

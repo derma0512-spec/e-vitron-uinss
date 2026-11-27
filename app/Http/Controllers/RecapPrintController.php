@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Submission;
+use App\Services\VideotronPlaybackService;
 use Carbon\Carbon;
 use Dompdf\Dompdf;
 use Dompdf\Options;
@@ -13,11 +14,16 @@ use Illuminate\View\View;
 class RecapPrintController extends Controller
 {
     /**
+     * Batas maksimum baris arsip per satu kali ekspor PDF / cetak agar memori PHP tetap stabil bertahun-tahun.
+     */
+    public const MAX_EXPORT_ROWS = 500;
+
+    /**
      * Menampilkan laporan rekap arsip resmi dalam format PDF A4 Portrait di tab baru (Khusus Admin)
      */
     public function exportPdf(Request $request): Response
     {
-        if (! auth()->user()?->isAdmin()) {
+        if (! auth()->user()?->isActiveAdmin()) {
             abort(403);
         }
 
@@ -29,23 +35,22 @@ class RecapPrintController extends Controller
         $startDate = (string) $request->query('start_date', '');
         $endDate = (string) $request->query('end_date', '');
 
-        $query = Submission::query()->with(['videotrons', 'user'])->where(function ($q) {
+        $playbackService = app(VideotronPlaybackService::class);
+        $today = $playbackService->todayDate();
+
+        $query = Submission::query()->with(['videotrons', 'user'])->where(function ($q) use ($today) {
             $q->whereIn('status', ['selesai', 'ditolak', 'dibatalkan'])
-                ->orWhere(function ($sq) {
+                ->orWhere(function ($sq) use ($today) {
                     $sq->where('status', 'disetujui')
-                        ->whereDate('end_date', '<', today());
+                        ->whereDate('end_date', '<', $today);
                 });
         });
 
-        if (filled($filterStatus) && in_array($filterStatus, ['selesai', 'ditolak', 'dibatalkan'], true)) {
-            if ($filterStatus === 'selesai') {
-                $query->where(function ($sq) {
-                    $sq->where('status', 'selesai')
-                        ->orWhere(function ($ssq) {
-                            $ssq->where('status', 'disetujui')
-                                ->whereDate('end_date', '<', today());
-                        });
-                });
+        if (filled($filterStatus) && in_array($filterStatus, ['perlu_diturunkan', 'selesai', 'ditolak', 'dibatalkan'], true)) {
+            if ($filterStatus === 'perlu_diturunkan') {
+                $playbackService->applyPendingTakedownSubmissionConstraints($query, $today);
+            } elseif ($filterStatus === 'selesai') {
+                $playbackService->applyExpiredBroadcastConstraints($query, $today);
             } else {
                 $query->where('status', $filterStatus);
             }
@@ -90,7 +95,9 @@ class RecapPrintController extends Controller
             });
         }
 
-        $records = $query->orderBy('ticket_code', 'asc')->get();
+        $totalMatched = (clone $query)->count();
+        $isTruncated = $totalMatched > self::MAX_EXPORT_ROWS;
+        $records = $query->orderBy('ticket_code', 'asc')->limit(self::MAX_EXPORT_ROWS)->get();
 
         $totalArchived = $records->count();
         $totalCompleted = $records->filter(fn (Submission $s) => $s->display_status === 'selesai')->count();
@@ -98,6 +105,7 @@ class RecapPrintController extends Controller
         $totalCanceled = $records->filter(fn (Submission $s) => $s->display_status === 'dibatalkan')->count();
 
         $statusLabel = match ($filterStatus) {
+            'perlu_diturunkan' => 'Perlu Diturunkan',
             'selesai' => 'Selesai Tayang',
             'ditolak' => 'Ditolak Admin',
             'dibatalkan' => 'Dibatalkan Pengaju',
@@ -149,6 +157,9 @@ class RecapPrintController extends Controller
             'searchQuery' => $searchQuery,
             'exportedAt' => $exportedAt,
             'logoBase64' => $logoBase64,
+            'isTruncated' => $isTruncated,
+            'totalMatched' => $totalMatched,
+            'maxExportRows' => self::MAX_EXPORT_ROWS,
         ])->render();
 
         $options = new Options;
@@ -202,7 +213,7 @@ class RecapPrintController extends Controller
      */
     public function printSinglePdf(int $id): Response
     {
-        if (! auth()->user()?->isAdmin()) {
+        if (! auth()->user()?->isActiveAdmin()) {
             abort(403);
         }
 
@@ -248,7 +259,7 @@ class RecapPrintController extends Controller
      */
     public function print(Request $request): View
     {
-        if (! auth()->user()?->isAdmin()) {
+        if (! auth()->user()?->isActiveAdmin()) {
             abort(403);
         }
 
@@ -256,23 +267,22 @@ class RecapPrintController extends Controller
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
 
-        $query = Submission::query()->with(['videotrons', 'user'])->where(function ($q) {
+        $playbackService = app(VideotronPlaybackService::class);
+        $today = $playbackService->todayDate();
+
+        $query = Submission::query()->with(['videotrons', 'user'])->where(function ($q) use ($today) {
             $q->whereIn('status', ['selesai', 'ditolak', 'dibatalkan'])
-                ->orWhere(function ($sq) {
+                ->orWhere(function ($sq) use ($today) {
                     $sq->where('status', 'disetujui')
-                        ->whereDate('end_date', '<', today());
+                        ->whereDate('end_date', '<', $today);
                 });
         });
 
-        if ($status && in_array($status, ['selesai', 'ditolak', 'dibatalkan'], true)) {
-            if ($status === 'selesai') {
-                $query->where(function ($q) {
-                    $q->where('status', 'selesai')
-                        ->orWhere(function ($sq) {
-                            $sq->where('status', 'disetujui')
-                                ->whereDate('end_date', '<', today());
-                        });
-                });
+        if ($status && in_array($status, ['perlu_diturunkan', 'selesai', 'ditolak', 'dibatalkan'], true)) {
+            if ($status === 'perlu_diturunkan') {
+                $playbackService->applyPendingTakedownSubmissionConstraints($query, $today);
+            } elseif ($status === 'selesai') {
+                $playbackService->applyExpiredBroadcastConstraints($query, $today);
             } else {
                 $query->where('status', $status);
             }
@@ -286,7 +296,9 @@ class RecapPrintController extends Controller
             $query->whereDate('end_date', '<=', $endDate);
         }
 
-        $submissions = $query->latest('updated_at')->get();
+        $totalMatched = (clone $query)->count();
+        $isTruncated = $totalMatched > self::MAX_EXPORT_ROWS;
+        $submissions = $query->latest('updated_at')->limit(self::MAX_EXPORT_ROWS)->get();
 
         $totalArchived = $submissions->count();
         $totalCompleted = $submissions->filter(fn ($s) => $s->display_status === 'selesai')->count();
@@ -300,6 +312,9 @@ class RecapPrintController extends Controller
             'totalRejected' => $totalRejected,
             'totalCanceled' => $totalCanceled,
             'filterStatus' => $status,
+            'isTruncated' => $isTruncated,
+            'totalMatched' => $totalMatched,
+            'maxExportRows' => self::MAX_EXPORT_ROWS,
         ]);
     }
 }

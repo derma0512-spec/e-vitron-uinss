@@ -17,8 +17,8 @@ class SubmissionObserver
      */
     public function created(Submission $submission): void
     {
-        // Kirim notifikasi nyata ke seluruh akun Admin (Format Filament Database Notification)
-        $admins = User::where('role', 'admin')->get();
+        // Kirim notifikasi nyata ke seluruh akun Admin aktif (Format Filament Database Notification)
+        $admins = User::activeAdmins()->get();
         foreach ($admins as $admin) {
             $notif = Notification::make()
                 ->title('Pengajuan Baru Masuk')

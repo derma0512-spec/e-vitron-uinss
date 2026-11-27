@@ -127,6 +127,7 @@
             @php
                 $statusOptions = [
                     '' => ['label' => 'Semua Status', 'dot' => '#64748B', 'count' => $stats['total'] ?? 0],
+                    'perlu_diturunkan' => ['label' => 'Perlu Diturunkan', 'dot' => '#D97706', 'count' => $stats['pending_takedown'] ?? 0],
                     'selesai' => ['label' => 'Selesai Tayang', 'dot' => '#16A34A', 'count' => $stats['completed'] ?? 0],
                     'ditolak' => ['label' => 'Ditolak Admin', 'dot' => '#DC2626', 'count' => $stats['rejected'] ?? 0],
                     'dibatalkan' => ['label' => 'Dibatalkan Pengaju', 'dot' => '#94A3B8', 'count' => $stats['canceled'] ?? 0],
@@ -137,9 +138,9 @@
                 <button type="button" 
                         @click.stop="activeDropdown = (activeDropdown === 'status' ? null : 'status')" 
                         :class="{ 'is-open': activeDropdown === 'status' }"
-                        class="sipetron-dropdown-trigger {{ filled($filterStatus) ? 'is-active' : '' }}">
+                        class="sipetron-dropdown-trigger">
                     <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
-                        <svg style="width: 18px; height: 18px; color: {{ filled($filterStatus) ? '#0F3D2E' : '#94A3B8' }}; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg style="width: 18px; height: 18px; color: #94A3B8; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                         </svg>
                         <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500;">
@@ -250,9 +251,9 @@
                 <button type="button"
                         @click.stop="activeDropdown = (activeDropdown === 'period' ? null : 'period')"
                         :class="{ 'is-open': activeDropdown === 'period' }"
-                        class="sipetron-dropdown-trigger {{ $isActivePeriod ? 'is-active' : '' }}">
+                        class="sipetron-dropdown-trigger">
                     <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
-                        <svg style="width: 18px; height: 18px; color: {{ $isActivePeriod ? '#0F3D2E' : '#94A3B8' }}; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg style="width: 18px; height: 18px; color: #94A3B8; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                         <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500;">

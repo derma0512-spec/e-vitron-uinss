@@ -337,6 +337,82 @@
             border: 1px solid #E2E8F0;
         }
 
+        @keyframes sipetron-ping {
+            75%, 100% {
+                transform: scale(2.2);
+                opacity: 0;
+            }
+        }
+
+        .sipetron-takedown-pill {
+            font-size: 0.6875rem;
+            font-weight: 700;
+            color: #B45309;
+            background: #FFFBEB;
+            border: 1px solid #FDE68A;
+            padding: 0.15rem 0.6rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 150ms ease;
+            box-shadow: 0 1px 2px rgba(217, 119, 6, 0.08);
+        }
+
+        .sipetron-takedown-pill.is-active {
+            color: #92400E;
+            background: #FEF3C7;
+            border-color: #F59E0B;
+        }
+
+        .sipetron-takedown-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.38rem;
+            padding: 0.3rem 0.72rem;
+            border-radius: 9999px;
+            background-color: #FFFFFF;
+            border: 1px solid #CBD5E1;
+            color: #0F3D2E;
+            font-size: 0.71875rem;
+            font-weight: 600;
+            line-height: 1;
+            cursor: pointer;
+            transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+            white-space: nowrap;
+        }
+
+        .sipetron-takedown-btn:hover,
+        .sipetron-takedown-btn:focus-visible {
+            background-color: #F8FAF9;
+            border-color: #0F3D2E;
+            color: #0F3D2E;
+            outline: none;
+        }
+
+        .sipetron-takedown-btn:disabled {
+            opacity: 0.65;
+            cursor: wait;
+        }
+
+        .sipetron-takedown-checkbox {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            border: 1.5px solid #94A3B8;
+            background: transparent;
+            display: inline-block;
+            flex-shrink: 0;
+            transition: border-color 150ms ease;
+        }
+
+        .sipetron-takedown-btn:hover .sipetron-takedown-checkbox,
+        .sipetron-takedown-btn:focus-visible .sipetron-takedown-checkbox {
+            border-color: #0F3D2E;
+        }
+
         /* Action Buttons di Kanan Header Card */
         .sipetron-card-actions {
             display: flex;

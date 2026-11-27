@@ -552,4 +552,31 @@
                 grid-template-columns: 1fr;
             }
         }
+        .sipetron-takedown-bar {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 0.875rem;
+            padding: 0.85rem 1.15rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.85rem;
+            flex-wrap: wrap;
+            box-sizing: border-box;
+            width: 100%;
+            text-decoration: none;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+            transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+        }
+
+        .sipetron-takedown-bar:hover {
+            transform: translateY(-2px);
+            border-color: #86EFAC;
+            box-shadow: 0 10px 20px -3px rgba(15, 61, 46, 0.10), 0 4px 6px -2px rgba(15, 61, 46, 0.04);
+        }
+
+        .sipetron-takedown-bar:hover .arrow-right {
+            transform: translateX(3px);
+        }
     </style>

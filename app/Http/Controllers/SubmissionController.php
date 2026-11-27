@@ -141,9 +141,10 @@ class SubmissionController extends Controller
             if ($request->hasFile('surat_peminjaman')) {
                 $suratPath = $request->file('surat_peminjaman')->store('surat_peminjaman', 'local');
             }
-            // Buat kode tiket unik: VTR-YYYYMM-XXXX
-            $count = Submission::whereMonth('created_at', now()->month)
-                ->whereYear('created_at', now()->year)
+            // Buat kode tiket unik: VTR-YYYYMM-XXXX (memanfaatkan indeks created_at)
+            $monthStart = now()->startOfMonth();
+            $monthEnd = now()->endOfMonth();
+            $count = Submission::whereBetween('created_at', [$monthStart, $monthEnd])
                 ->lockForUpdate()
                 ->count() + 1;
             $ticketCode = 'VTR-'.now()->format('Ym').'-'.str_pad($count, 4, '0', STR_PAD_LEFT);
@@ -200,6 +201,8 @@ class SubmissionController extends Controller
         } else {
             $periodFormatted = '-';
         }
+
+        $submission->load('videotrons:id,name');
 
         return redirect()->route('pengajuan.create')
             ->with('submission_success', [
@@ -326,8 +329,8 @@ class SubmissionController extends Controller
             'notes' => 'Dibatalkan oleh pengaju.',
         ]);
 
-        // Notifikasi ke seluruh Admin
-        $admins = User::where('role', 'admin')->get();
+        // Notifikasi ke seluruh Admin aktif
+        $admins = User::activeAdmins()->get();
         foreach ($admins as $admin) {
             $notif = Notification::make()
                 ->title('Pengajuan Dibatalkan')
@@ -407,8 +410,8 @@ class SubmissionController extends Controller
             'notes' => 'Pengaju telah mengirimkan revisi: '.$request->user_reply,
         ]);
 
-        // Notifikasi ke seluruh Admin
-        $admins = User::where('role', 'admin')->get();
+        // Notifikasi ke seluruh Admin aktif
+        $admins = User::activeAdmins()->get();
         foreach ($admins as $admin) {
             $notif = Notification::make()
                 ->title('Perbaikan Revisi Dikirim')

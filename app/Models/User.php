@@ -8,6 +8,7 @@ use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -25,6 +26,7 @@ class User extends Authenticatable implements FilamentUser
      */
     protected $attributes = [
         'account_status' => 'approved',
+        'is_super_admin' => false,
     ];
 
     /**
@@ -40,6 +42,37 @@ class User extends Authenticatable implements FilamentUser
         return $this->role === 'admin';
     }
 
+    public function isActiveAdmin(): bool
+    {
+        return $this->isAdmin() && $this->isApproved();
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->isActiveAdmin() && (bool) $this->is_super_admin;
+    }
+
+    public function adminRoleLabel(): string
+    {
+        return $this->is_super_admin ? 'Super Admin' : 'Admin Operator';
+    }
+
+    /**
+     * Scope khusus seluruh admin yang masih aktif (untuk penerimaan notifikasi & pemeriksaan kuorum).
+     *
+     * @param  Builder<User>  $query
+     * @return Builder<User>
+     */
+    public function scopeActiveAdmins(Builder $query): Builder
+    {
+        return $query
+            ->where('role', 'admin')
+            ->where(function (Builder $subQuery): void {
+                $subQuery->whereNull('account_status')
+                    ->orWhere('account_status', 'approved');
+            });
+    }
+
     public function isApproved(): bool
     {
         return ($this->account_status ?? 'approved') === 'approved';
@@ -47,7 +80,7 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->isAdmin();
+        return $this->isActiveAdmin();
     }
 
     /**
@@ -120,6 +153,7 @@ class User extends Authenticatable implements FilamentUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_super_admin' => 'boolean',
         ];
     }
 }

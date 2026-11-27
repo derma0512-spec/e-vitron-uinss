@@ -17,11 +17,6 @@ class PreventBackHistory
     {
         $response = $next($request);
 
-        // Pasang HTTP Security Headers (Anti-Clickjacking & Anti-MIME Sniffing)
-        $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
-        $response->headers->set('X-Content-Type-Options', 'nosniff');
-        $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
-
         // Jangan terapkan no-store pada assets (filament/assets, build/*, fonts) atau request Livewire / AJAX
         if ($request->isMethod('GET')
             && ! $request->is('livewire/*')

@@ -232,6 +232,39 @@ class SubmissionAdminMasterDetailTest extends TestCase
         $this->assertEquals('disetujui', $fresh->status, 'Status must remain disetujui and not change to selesai automatically');
     }
 
+    public function test_marking_material_downloaded_with_status_histories_updates_drawer_on_first_click(): void
+    {
+        $admin = User::where('role', 'admin')->first();
+        $submission = Submission::where('status', 'disetujui')->first();
+
+        $submission->statusHistories()->create([
+            'user_id' => $submission->user_id,
+            'from_status' => null,
+            'to_status' => 'menunggu',
+            'notes' => 'Pengajuan baru berhasil dikirimkan oleh pengaju.',
+        ]);
+        $submission->statusHistories()->create([
+            'user_id' => $admin->id,
+            'from_status' => 'menunggu',
+            'to_status' => 'disetujui',
+            'notes' => 'Pengajuan telah diperiksa dan disetujui.',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(ListSubmissions::class)
+            ->call('selectSubmission', $submission->id)
+            ->assertSee('Tandai Materi Sudah Diunduh')
+            ->call('markMaterialDownloaded')
+            ->assertNotified()
+            ->assertSee('Materi Siap / Sudah Diunduh')
+            ->assertSee("oleh {$admin->name}")
+            ->assertDontSee('Tandai Materi Sudah Diunduh');
+
+        $fresh = $submission->fresh();
+        $this->assertNotNull($fresh->material_downloaded_at);
+        $this->assertSame($admin->id, $fresh->material_downloaded_by);
+    }
+
     public function test_legacy_admin_routes_redirect_to_unified_submissions_page(): void
     {
         $admin = User::where('role', 'admin')->first();

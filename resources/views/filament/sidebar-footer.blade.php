@@ -1,7 +1,7 @@
 @php
     $user = auth()->user();
     $name = $user?->name ?? 'Admin';
-    $role = ucfirst($user?->role ?? 'Administrator');
+    $role = $user?->isAdmin() ? $user->adminRoleLabel() : ucfirst($user?->role ?? 'Administrator');
     $initials = collect(explode(' ', $name))->take(2)->map(fn($w) => strtoupper($w[0]))->implode('');
     $logoutUrl = route('filament.admin.auth.logout');
 @endphp

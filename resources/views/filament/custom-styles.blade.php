@@ -56,7 +56,7 @@
     }
 </style>
 
-<link rel="stylesheet" href="{{ asset('css/sipetron-custom.css') }}?v=20261109c">
+<link rel="stylesheet" href="{{ asset('css/sipetron-custom.css') }}?v={{ @filemtime(public_path('css/sipetron-custom.css')) ?: '20261126a' }}">
 
 <style id="sipetron-portrait-responsive-styles">
     /* Dukungan tata letak Admin untuk Tablet & Layar Anjungan Kiosk Portrait (min-width: 768px & tinggi > lebar) tanpa mengubah Laptop Landscape maupun Mobile HP */

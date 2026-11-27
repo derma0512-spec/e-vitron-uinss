@@ -272,10 +272,14 @@
                         $maxDaysSetting = (int) setting('max_display_days', 7);
                         $minDaysSetting = (int) setting('min_days_before', 3);
                     @endphp
-                    @if($maxDaysSetting > 0)
+                    @if($minDaysSetting > 0 && $maxDaysSetting > 0)
                         <span>Pengajuan wajib dikirim minimal <strong>H-{{ $minDaysSetting }}</strong> sebelum tanggal penayangan, dengan batas durasi maksimal <strong>{{ $maxDaysSetting }} hari</strong> per pengajuan.</span>
-                    @else
+                    @elseif($minDaysSetting > 0)
                         <span>Pengajuan wajib dikirim minimal <strong>H-{{ $minDaysSetting }}</strong> sebelum tanggal penayangan. Durasi penayangan akan disesuaikan dengan ketersediaan slot antrean videotron.</span>
+                    @elseif($maxDaysSetting > 0)
+                        <span>Pengajuan dapat dikirim <strong>mulai hari ini (Hari-H)</strong>, dengan batas durasi maksimal <strong>{{ $maxDaysSetting }} hari</strong> per pengajuan.</span>
+                    @else
+                        <span>Pengajuan dapat dikirim <strong>mulai hari ini (Hari-H)</strong>. Durasi penayangan akan disesuaikan dengan ketersediaan slot antrean videotron.</span>
                     @endif
                 </div>
 

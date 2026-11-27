@@ -15,9 +15,9 @@
                     @if(($counts['menunggu'] ?? 0) > 0)
                         <button 
                             type="button" 
-                            wire:click="setStatusFilter('menunggu')"
+                            wire:click="setStatusFilter('{{ $this->statusFilter === 'menunggu' ? 'all' : 'menunggu' }}')"
                             style="font-size: 0.6875rem; font-weight: 700; color: {{ $this->statusFilter === 'menunggu' ? '#92400E' : '#B45309' }}; background: {{ $this->statusFilter === 'menunggu' ? '#FEF3C7' : '#FFFBEB' }}; border: 1px solid {{ $this->statusFilter === 'menunggu' ? '#F59E0B' : '#FDE68A' }}; padding: 0.15rem 0.6rem; border-radius: 9999px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: all 150ms ease; box-shadow: 0 1px 2px rgba(217, 119, 6, 0.08);"
-                            title="Klik untuk langsung memfilter pengajuan yang perlu direview"
+                            title="{{ $this->statusFilter === 'menunggu' ? 'Klik untuk kembali ke semua pengajuan' : 'Klik untuk langsung memfilter pengajuan yang perlu direview' }}"
                         >
                             <span style="position: relative; display: inline-flex; width: 7px; height: 7px;">
                                 <span style="position: absolute; display: inline-flex; height: 100%; width: 100%; border-radius: 9999px; background: #F59E0B; opacity: 0.75; animation: sipetron-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;"></span>
@@ -39,8 +39,8 @@
                         <col class="sipetron-col-ticket" style="width: 142px;">
                         <col class="sipetron-col-content">
                         <col class="sipetron-col-requester" style="width: 155px;">
-                        <col class="sipetron-col-file" style="width: 118px;">
-                        <col class="sipetron-col-status" style="width: 140px;">
+                        <col class="sipetron-col-file" style="width: 128px;">
+                        <col class="sipetron-col-status" style="width: 168px;">
                         <col class="sipetron-col-action" style="width: 88px;">
                     </colgroup>
                     <thead>
@@ -131,7 +131,7 @@
                                     </div>
                                 </td>
 
-                                {{-- 4. Status File (Materi): Hanya relevan setelah pengajuan Disetujui (Terjadwal/Tayang) --}}
+                                {{-- 4. Status File (Materi) --}}
                                 <td class="sipetron-col-file" style="white-space: nowrap; padding-left: 0.5rem; padding-right: 0.5rem;">
                                     <div class="sipetron-cell-center">
                                         @if(! in_array($statusKey, ['terjadwal', 'tayang', 'selesai'], true))

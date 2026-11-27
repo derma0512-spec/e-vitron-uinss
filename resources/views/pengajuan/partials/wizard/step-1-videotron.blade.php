@@ -87,11 +87,15 @@
                                                 <span>Batas Waktu</span>
                                             </div>
                                             <span class="px-2 py-0.5 rounded-md text-[10.5px] font-semibold bg-amber-50 text-amber-800 border border-amber-200/60 shrink-0 transition-colors">
-                                                Minimal H-{{ $minDaysBefore }}
+                                                {{ $minDaysBefore > 0 ? 'Minimal H-'.$minDaysBefore : 'Bisa Hari-H' }}
                                             </span>
                                         </div>
                                         <p class="text-[11px] sm:text-xs text-slate-600 mt-1.5 sm:mt-2 leading-snug sm:leading-relaxed">
-                                            Formulir dikirim paling lambat <strong class="text-slate-800 font-semibold">{{ $minDaysBefore }} hari kerja</strong> sebelum tanggal mulai penayangan. Kurasi materi oleh Tim Admin diproses pada hari dan jam kerja dinas kampus.
+                                            @if($minDaysBefore > 0)
+                                                Formulir dikirim paling lambat <strong class="text-slate-800 font-semibold">{{ $minDaysBefore }} hari kerja</strong> sebelum tanggal mulai penayangan. Kurasi materi oleh Tim Admin diproses pada hari dan jam kerja dinas kampus.
+                                            @else
+                                                Pengajuan dapat dikirim <strong class="text-slate-800 font-semibold">hingga hari penayangan (Hari-H)</strong> tanpa batas minimal hari sebelumnya. Kurasi materi oleh Tim Admin tetap diproses pada hari dan jam kerja dinas kampus.
+                                            @endif
                                         </p>
                                     </div>
                                 </div>

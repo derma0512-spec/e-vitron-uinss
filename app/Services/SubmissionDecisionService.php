@@ -244,8 +244,9 @@ class SubmissionDecisionService
     public function markMaterialDownloaded(Submission $submission, ?int $adminId = null): void
     {
         $adminId = $adminId ?? Auth::id();
+        $downloadedAt = null;
 
-        DB::transaction(function () use ($submission, $adminId) {
+        DB::transaction(function () use ($submission, $adminId, &$downloadedAt) {
             $locked = Submission::query()->lockForUpdate()->findOrFail($submission->id);
 
             if ($locked->status !== 'disetujui') {
@@ -256,12 +257,21 @@ class SubmissionDecisionService
                 throw new DomainException('Materi pengajuan ini sudah ditandai Sudah Diunduh sebelumnya.');
             }
 
+            $downloadedAt = now();
+
             $locked->update([
-                'material_downloaded_at' => now(),
+                'material_downloaded_at' => $downloadedAt,
                 'material_downloaded_by' => $adminId,
             ]);
         });
 
-        $submission->refresh();
+        $submission->forceFill([
+            'material_downloaded_at' => $downloadedAt,
+            'material_downloaded_by' => $adminId,
+        ])->syncOriginalAttributes(['material_downloaded_at', 'material_downloaded_by']);
+
+        if ($submission->relationLoaded('materialDownloader')) {
+            $submission->load('materialDownloader');
+        }
     }
 }

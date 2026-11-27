@@ -426,6 +426,24 @@ class NotificationAndProfileDropdownTest extends TestCase
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'unread_count',
+            'total_count',
+            'notifications',
+            'drawer_notifications' => [
+                '*' => [
+                    'id',
+                    'title',
+                    'message',
+                    'ticket_code',
+                    'submission_title',
+                    'event',
+                    'type',
+                    'type_class',
+                    'is_unread',
+                    'url',
+                    'delete_url',
+                    'time_ago',
+                ],
+            ],
             'latest' => [
                 'id',
                 'title',
@@ -438,7 +456,26 @@ class NotificationAndProfileDropdownTest extends TestCase
         ]);
 
         $this->assertEquals(1, $response->json('unread_count'));
+        $this->assertEquals(1, $response->json('total_count'));
         $this->assertEquals('VTR-202610-POLL', $response->json('latest.ticket_code'));
+        $this->assertEquals('Webinar AI', $response->json('drawer_notifications.0.submission_title'));
+        $this->assertEquals('is-success', $response->json('drawer_notifications.0.type_class'));
+        $this->assertTrue($response->json('drawer_notifications.0.is_unread'));
+    }
+
+    public function test_admin_database_notifications_poll_every_10_seconds_with_focus_refresh_and_sentinel(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $response = $this->actingAs($admin)->get('/admin');
+        $response->assertOk();
+
+        $content = $response->getContent();
+        $this->assertStringContainsString('wire:poll.10s', $content);
+        $this->assertStringContainsString('notif-poll-signal-', $content);
+        $this->assertStringContainsString('visibilitychange', $content);
+        $this->assertStringContainsString('refreshNow()', $content);
+        $this->assertStringNotContainsString('x-effect="checkIncoming(', $content);
     }
 
     /**

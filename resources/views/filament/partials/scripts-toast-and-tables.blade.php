@@ -258,23 +258,24 @@
         });
     }
 
-    // Penanganan klik pada baris tabel Kelola Videotron (klik sel tabel, kartu, tombol aksi, maupun toggle)
+    // Penanganan klik pada baris tabel Kelola Videotron:
+    // - Toggle Aktif bekerja mandiri
+    // - Tombol Kondisi hanya membuka modal Kondisi
+    // - Tombol Ubah Data hanya membuka laci Ubah Data
+    // - Klik area baris videotron hanya membuka laci Tayang Hari Ini (inspect_broadcasts)
     document.addEventListener('click', function(e) {
-        // Pastikan klik berasal dari tabel dalam resource videotron
         const table = e.target.closest('.fi-resource-videotrons .fi-ta-table');
         if (!table) return;
 
         const tr = e.target.closest('tbody tr');
         if (!tr) return;
 
-        // Jika yang diklik adalah toggle switch (kolom Aktif), jangan trigger ubah data
-        if (e.target.closest('input[type="checkbox"], [role="switch"], .fi-ta-toggle')) {
+        // 1. Jika yang diklik adalah area kolom toggle switch (Aktif), biarkan bekerja mandiri
+        if (e.target.closest('input[type="checkbox"], [role="switch"], .fi-ta-toggle, .fi-table-cell-is-active, td:has(.fi-ta-toggle)')) {
             return;
         }
 
-        // 1. Jika yang diklik adalah tombol Kondisi, biarkan tombol Kondisi bekerja mandiri
-        const kondisiBtn = e.target.closest('.fi-ta-actions [wire\\:click*="quick_condition"]');
-        if (kondisiBtn) {
+        function markRowActive(targetBtn) {
             document.querySelectorAll('.videotron-row-loading').forEach(function(el) {
                 el.classList.remove('videotron-row-loading');
             });
@@ -284,43 +285,49 @@
             clearVideotronRowActive();
             tr.classList.add('videotron-row-loading');
             tr.classList.add('videotron-row-active');
-            kondisiBtn.classList.add('videotron-btn-loading');
+            if (targetBtn) {
+                targetBtn.classList.add('videotron-btn-loading');
+            }
             setTimeout(clearVideotronRowLoading, 3000);
+        }
+
+        // 2. Klik di dalam kolom Aksi: hanya jalankan tombol yang benar-benar diklik
+        const actionsCell = e.target.closest('.fi-ta-actions-cell, .fi-ta-actions');
+        if (actionsCell) {
+            const actionBtn = e.target.closest('.fi-ta-actions button, .fi-ta-actions a');
+            if (actionBtn) {
+                markRowActive(actionBtn);
+            }
             return;
         }
 
-        // 2. Cari tombol Ubah Data pada baris ini
-        const editBtn = tr.querySelector('.fi-ta-actions [wire\\:click*="edit"], .fi-ta-actions button:last-child');
-        if (!editBtn) return;
+        // 3. Klik di area baris videotron (Foto / Videotron & Lokasi / Resolusi / Kondisi):
+        // buka laci Tayang Hari Ini (inspect_broadcasts) tanpa membajak ke Ubah Data
+        const inspectBtn = tr.querySelector('button[wire\\:click*="inspect_broadcasts"]');
+        if (!inspectBtn) return;
 
-        // Bersihkan status loading & active sebelumnya di baris lain
-        document.querySelectorAll('.videotron-row-loading').forEach(function(el) {
-            el.classList.remove('videotron-row-loading');
-        });
-        document.querySelectorAll('.videotron-btn-loading').forEach(function(el) {
-            el.classList.remove('videotron-btn-loading');
-        });
-        clearVideotronRowActive();
+        markRowActive(null);
 
-        // Terapkan visual loading halus & active row pada baris dan tombol Ubah Data
-        tr.classList.add('videotron-row-loading');
-        tr.classList.add('videotron-row-active');
-        editBtn.classList.add('videotron-btn-loading');
-        setTimeout(clearVideotronRowLoading, 3000);
-
-        // 3. Jika user mengklik di mana saja pada baris/kartu (bukan pas di tombol Ubah Data):
-        // Otomatis panggil aksi klik tombol Ubah Data agar laci slide-over langsung terbuka!
-        const clickedEditBtn = e.target.closest('.fi-ta-actions [wire\\:click*="edit"], .fi-ta-actions button:last-child');
-        if (!clickedEditBtn) {
-            editBtn.click();
+        const clickedNativeInspectBtn = e.target.closest('button[wire\\:click*="inspect_broadcasts"]');
+        if (!clickedNativeInspectBtn) {
+            inspectBtn.click();
         }
     }, true);
 
-    // Pantau pembukaan & penutupan modal Filament (slide-over Ubah Data maupun modal Kondisi)
+    // Pantau pembukaan & penutupan modal Filament (laci Tayang Hari Ini, Ubah Data, maupun modal Kondisi)
     window.addEventListener('open-modal', clearVideotronRowLoading);
     window.addEventListener('close-modal', function() {
         clearVideotronRowLoading();
         clearVideotronRowActive();
+
+        // Bersihkan query ?inspect=ID setelah laci ditutup agar refresh halaman tidak membuka ulang laci lama
+        if (window.location.search.indexOf('inspect=') !== -1 && window.history && window.history.replaceState) {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('inspect')) {
+                url.searchParams.delete('inspect');
+                window.history.replaceState({}, '', url.pathname + (url.searchParams.toString() ? '?' + url.searchParams.toString() : '') + url.hash);
+            }
+        }
     });
     window.addEventListener('filament-modal-opened', clearVideotronRowLoading);
     window.addEventListener('filament-modal-closed', function() {
@@ -345,8 +352,8 @@
         const subRow = e.target.closest('.sipetron-table tbody tr.sipetron-table-row');
         if (!subRow) return;
 
-        // Jangan trigger loading jika yang diklik tombol salin tiket
-        if (e.target.closest('.sipetron-ticket-copy-btn')) return;
+        // Jangan trigger loading jika yang diklik tombol salin tiket atau checklist penurunan
+        if (e.target.closest('.sipetron-ticket-copy-btn, .sipetron-takedown-btn')) return;
 
         // Bersihkan loading baris lain
         document.querySelectorAll('.sipetron-row-loading').forEach(function(el) {
@@ -360,6 +367,29 @@
     }, true);
 
     window.addEventListener('sipetron:livewire-done', clearSubmissionsRowLoading);
+
+    // Sinkronisasi langsung angka badge Sidebar Riwayat & Rekap saat admin menceklis / membatalkan penurunan
+    window.addEventListener('sipetron:takedown-count-updated', function(e) {
+        const count = Number(e?.detail?.count ?? 0);
+        document.querySelectorAll('.fi-sidebar-nav a.fi-sidebar-item-button[href*="history-and-recap"]').forEach(function(navLink) {
+            let badge = navLink.querySelector('.fi-badge');
+            if (count > 0) {
+                if (!badge) {
+                    badge = document.createElement('span');
+                    badge.className = 'fi-badge flex items-center justify-center gap-x-1 rounded-md text-xs font-medium px-2 py-1 ms-auto';
+                    const inner = document.createElement('span');
+                    inner.className = 'fi-badge-label';
+                    badge.appendChild(inner);
+                    navLink.appendChild(badge);
+                }
+                const labelEl = badge.querySelector('.fi-badge-label') || badge.querySelector('span') || badge;
+                labelEl.textContent = String(count);
+                badge.style.display = '';
+            } else if (badge) {
+                badge.style.display = 'none';
+            }
+        });
+    });
 
     // Daftarkan Livewire request hook secara idempotent
     let _videotronHookRegistered = false;

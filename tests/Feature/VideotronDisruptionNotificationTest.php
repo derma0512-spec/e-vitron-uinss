@@ -9,6 +9,7 @@ use App\Models\Videotron;
 use App\Notifications\VideotronConditionNotification;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -317,5 +318,47 @@ class VideotronDisruptionNotificationTest extends TestCase
         $this->assertCount(1, $batchIds);
         $this->assertNotNull($batchIds->first());
         $this->assertIsInt($response->json('notifications.0.age_seconds'));
+    }
+
+    public function test_notify_affected_submissions_batches_notification_history_lookup_without_n_plus_1(): void
+    {
+        Notification::fake();
+
+        $videotron = Videotron::create([
+            'name' => 'Videotron Audit Query',
+            'location' => 'Gedung Rektorat',
+            'resolution' => '1920x1080',
+            'orientation' => 'landscape',
+            'condition' => 'gangguan',
+            'issue_notes' => 'Modul power supply bermasalah',
+            'is_active' => false,
+        ]);
+
+        for ($i = 1; $i <= 5; $i++) {
+            $applicant = User::factory()->create(['role' => 'mahasiswa']);
+            $submission = $this->createTestSubmission($applicant, [
+                'ticket_code' => 'VTR-20261127-00'.$i,
+            ]);
+            $submission->videotrons()->attach($videotron->id);
+        }
+
+        DB::enableQueryLog();
+        DB::flushQueryLog();
+
+        $sentCount = $videotron->notifyAffectedSubmissions('disruption');
+
+        $queries = DB::getQueryLog();
+        DB::disableQueryLog();
+
+        $this->assertSame(5, $sentCount);
+
+        $notificationSelectQueries = array_filter(
+            $queries,
+            fn (array $query): bool => str_contains(strtolower($query['query']), 'from "notifications"')
+                || str_contains(strtolower($query['query']), 'from `notifications`')
+        );
+
+        // Hanya 1 query bulk ke tabel notifications untuk 5 pengajuan (bukan 5 query N+1)
+        $this->assertCount(1, $notificationSelectQueries);
     }
 }

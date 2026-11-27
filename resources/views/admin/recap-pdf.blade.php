@@ -271,6 +271,11 @@
                     <strong>{{ $totalRejected }}</strong> {{ $labelDitolak }},
                     <strong>{{ $totalCanceled }}</strong> {{ $labelDibatalkan }}.
                 </p>
+                @if(!empty($isTruncated))
+                    <p style="margin: 5px 0 0 0; padding: 4pt 7pt; background-color: #FFFBEB; border: 0.5pt solid #F59E0B; color: #92400E; font-size: 7.8pt; text-align: left;">
+                        <strong>Catatan Batas Ekspor:</strong> Ditemukan <strong>{{ $totalMatched }}</strong> arsip pada filter ini. Demi stabilitas pencetakan dokumen, PDF menampilkan <strong>{{ $maxExportRows ?? 500 }}</strong> data pertama. Gunakan filter Bulan atau Tahun untuk mencetak arsip secara terpisah.
+                    </p>
+                @endif
             </td>
         </tr>
     </table>

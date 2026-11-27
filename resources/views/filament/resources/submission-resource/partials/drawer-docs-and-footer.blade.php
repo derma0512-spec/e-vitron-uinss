@@ -257,11 +257,11 @@
                         {{-- Daftar Videotron --}}
                         <div style="display: flex; flex-direction: column; gap: 0.35rem;">
                             @forelse($selected->videotrons as $v)
-                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.65rem; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 0.5rem; font-size: 0.75rem;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.45rem 0.65rem; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 0.5rem; font-size: 0.75rem;">
                                     <div style="display: flex; align-items: center; gap: 0.45rem; min-width: 0;">
                                         <span style="width: 0.45rem; height: 0.45rem; border-radius: 9999px; background: {{ $v->condition === 'normal' && $v->is_active ? '#10B981' : '#F59E0B' }}; flex-shrink: 0;" title="{{ $v->condition === 'normal' && $v->is_active ? 'Perangkat Siap & Normal' : 'Dalam Perawatan' }}"></span>
                                         <span style="font-weight: 700; color: #0F172A;">{{ $v->name }}</span>
-                                        <span style="color: #64748B; font-size: 0.6875rem;">({{ $v->location }})</span>
+                                        <span style="color: #64748B; font-size: 0.6875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">({{ $v->location }})</span>
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0;">
                                         <span style="font-size: 0.6875rem; color: #475569; font-family: monospace; background: #F1F5F9; padding: 1px 5px; border-radius: 4px;">

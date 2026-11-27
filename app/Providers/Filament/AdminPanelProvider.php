@@ -73,7 +73,7 @@ class AdminPanelProvider extends PanelProvider
                 scopes: ListUsers::class,
             )
             ->databaseNotifications(isLazy: false)
-            ->databaseNotificationsPolling('30s')
+            ->databaseNotificationsPolling('10s')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([

@@ -44,8 +44,11 @@ class DatabaseSeeder extends Seeder
                 'phone' => '081234567890',
                 'unit_or_prodi' => 'Tim Pengelola E-VITRON UIN SSC',
                 'auth_type' => 'local',
+                'account_status' => 'approved',
             ]
         );
+        $admin->is_super_admin = true;
+        $admin->save();
 
         // 3. Akun Mahasiswa Demo Utama (Ahmad Fadhil · Teknik Informatika)
         $userFadhil = User::updateOrCreate(

@@ -15,7 +15,7 @@ class UpcomingBroadcastsWidget extends Widget
 
     public static function canView(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->isActiveAdmin() ?? false;
     }
 
     public function getViewData(): array
